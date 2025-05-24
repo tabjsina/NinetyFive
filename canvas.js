@@ -5,12 +5,22 @@ const ctx = canvas.getContext('2d');
 let centerX = canvas.width / 2;  // Will be updated by resizeCanvas
 let centerY = canvas.height / 2; // Will be updated by resizeCanvas
 
-// Set canvas size to window size
+// Set canvas size to window size accounting for device pixel ratio
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    centerX = canvas.width / 2;
-    centerY = canvas.height / 2;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+
+    // Set the canvas size in actual pixels
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    // Scale all drawing operations by the dpr
+    ctx.scale(dpr, dpr);
+
+    // Update center coordinates (using CSS pixels)
+    centerX = rect.width / 2;
+    centerY = rect.height / 2;
+
     requestAnimationFrame && requestAnimationFrame(animate);
 }
 
