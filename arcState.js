@@ -28,7 +28,8 @@ class ArcState {
         const arcPortion = 1 - this.dotTransitionProgress;
         const centerOffset = (arcSegmentLength / 2) * this.dotTransitionProgress;
         return {
-            segmentLength: arcSegmentLength * arcPortion,
+            // Don't let the portion get to 0, otherwise the dot will disappear.
+            segmentLength: Math.max(arcSegmentLength * arcPortion, 0.001),
             offset: centerOffset // Offset to make arc shrink towards center
         };
     }
@@ -52,5 +53,3 @@ class ArcState {
         }
     }
 }
-
-// ArcState will be available globally

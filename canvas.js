@@ -30,7 +30,6 @@ const radiusIncrement = 20;
 const totalDivisions = 19;
 const maxCircles = 5;
 const arcLength = (2 * Math.PI) / totalDivisions;
-const gapBetweenArcs = arcLength / 2;
 const arcSegmentLength = arcLength / 2;
 
 // Animation properties

@@ -42,5 +42,3 @@ class CircleState {    constructor(index) {
         return this.rotation;
     }
 }
-
-// CircleState will be available globally
