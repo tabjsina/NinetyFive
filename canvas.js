@@ -108,7 +108,8 @@ class StateManager {
     }
       isAnimating() {
         // Always animate if we have any circles to rotate
-        return this.circles.length > 0 || 
+        const completedCircles = Math.floor(this.arcs.length / totalDivisions)
+        return completedCircles > 0 || 
                this.arcs.some(arc => arc.isAnimating);
     }
 }
