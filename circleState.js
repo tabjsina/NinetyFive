@@ -1,11 +1,12 @@
 // CircleState class definition
-class CircleState {
-    constructor(index) {
+class CircleState {    constructor(index) {
         this.index = index;
         this.radius = baseRadius;
         this.targetRadius = baseRadius;
         this.isAnimating = false;
         this.animationStartTime = null;
+        this.rotation = 0; // Random initial rotation
+        this.rotationSpeed = 0.075;
     }
 
     updateRadius(currentTime, newTargetRadius) {
@@ -29,6 +30,16 @@ class CircleState {
         }
         
         return this.radius;
+    }
+
+    updateRotation(currentTime, lastFrameTime) {
+        if (lastFrameTime) {
+            const deltaTime = (currentTime - lastFrameTime) / 1000; // Convert to seconds
+            this.rotation += this.rotationSpeed * deltaTime;
+            // Keep rotation between 0 and 2π
+            this.rotation = this.rotation % (Math.PI * 2);
+        }
+        return this.rotation;
     }
 }
 

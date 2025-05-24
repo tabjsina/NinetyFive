@@ -23,6 +23,7 @@ const arcSegmentLength = arcLength / 2;
 const textTapAnimDuration = 400;
 const arcEntryAnimDuration = 700;
 const radiusExpandDuration = 3000;
+const dotTransitionDuration = 400;
 
 class StateManager {
     constructor() {
@@ -31,6 +32,7 @@ class StateManager {
         this.activeCircleIndex = 0;
         this.lastClickCount = totalDivisions * maxCircles;
         this.textBobbleStartTime = null;
+        this.lastFrameTime = null;
     }
 
     getCircleState(index) {
@@ -50,24 +52,41 @@ class StateManager {
         }
         return false;
     }
-
-    updateCircles(currentTime) {
+    
+    updateAndDrawCircles(currentTime) {
         const completedCircles = Math.floor(this.arcs.length / totalDivisions);
 
         // Don't want to push the last circle.
         const completedCirclesToBePushed = Math.min(completedCircles, maxCircles - 1);
-          // Update each circle's target radius based on its position relative to newest circle
+        // Update each circle's radius and rotation
         for (let i = 0; i < completedCirclesToBePushed; i++) {
             const circle = this.circles[i];
+            // Update radius
             const distanceFromNewest = completedCirclesToBePushed - circle.index - 1;
             const newTargetRadius = baseRadius + (radiusIncrement * (distanceFromNewest + 1));
             circle.updateRadius(currentTime, newTargetRadius);
+
+            // Update rotation
+            circle.updateRotation(currentTime, this.lastFrameTime);
         }
+
+        
+      // Draw and update all arcs
+            this.arcs.forEach(arc => {
+                if (arc.circle < completedCirclesToBePushed) {
+                    arc.startDotTransition(currentTime);
+                }
+
+                arc.updateStates(currentTime);
+                drawArc(arc, currentTime);
+            });
+        
+        this.lastFrameTime = currentTime;
     }
-    
-    isAnimating() {
-        return this.arcs.some(arc => arc.isAnimating) || 
-               this.circles.some(circle => circle.isAnimating);
+      isAnimating() {
+        // Always animate if we have any circles to rotate
+        return this.circles.length > 0 || 
+               this.arcs.some(arc => arc.isAnimating);
     }
 }
 
@@ -81,9 +100,14 @@ ctx.lineCap = 'round';
 // Draw initial completion text
 drawCompletionText(performance.now());
 
-function drawArc(arcState, scale = 1, currentTime) {
-    const startAngle = arcState.positionInCircle * (arcLength) - Math.PI / 2;
-    const endAngle = startAngle + arcSegmentLength;
+function drawArc(arcState, currentTime) {
+    const scale = arcState.getScale(currentTime);
+    const circle = stateManager.getCircleState(arcState.circle);
+    const { segmentLength, offset } = arcState.getArcProperties();
+    
+    const baseStartAngle = arcState.positionInCircle * (arcLength) - Math.PI / 2;
+    const startAngle = baseStartAngle + circle.rotation + offset;
+    const endAngle = startAngle + segmentLength;
     
     ctx.beginPath();
     ctx.lineWidth = 10 * scale;
@@ -124,12 +148,8 @@ function animate(currentTime) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Update circle states
-    stateManager.updateCircles(currentTime);
-      // Draw and update all arcs
-    stateManager.arcs.forEach(arc => {
-        const scale = arc.getScale(currentTime);
-        drawArc(arc, scale, currentTime);
-    });
+    stateManager.updateAndDrawCircles(currentTime);
+
       // Draw completion text on top
     drawCompletionText(currentTime);
     
