@@ -52,10 +52,10 @@ class StateManager {
     constructor() {
         this.circles = [];
         this.arcs = [];
+        this.arcCountOnLastUpdate = 0;
         this.activeCircleIndex = 0;
         this.lastClickCount = totalDivisions * maxCircles;
         this.textBobbleStartTime = null;
-        this.lastFrameTime = null;
     }
 
     getCircleState(index) {
@@ -78,39 +78,45 @@ class StateManager {
     
     updateAndDrawCircles(currentTime) {
         const completedCircles = Math.floor(this.arcs.length / totalDivisions);
-
         // Don't want to push the last circle.
         const completedCirclesToBePushed = Math.min(completedCircles, maxCircles - 1);
-        // Update each circle's radius and rotation
-        for (let i = 0; i < completedCirclesToBePushed; i++) {
-            const circle = this.circles[i];
-            // Update radius
-            const distanceFromNewest = completedCirclesToBePushed - circle.index - 1;
-            const newTargetRadius = baseRadius + (radiusIncrement * (distanceFromNewest + 1));
-            circle.updateRadius(currentTime, newTargetRadius);
 
-            // Update rotation
-            circle.updateRotation(currentTime, this.lastFrameTime);
+        if (this.arcCountOnLastUpdate < this.arcs.length) {
+            this.arcCountOnLastUpdate = this.arcs.length;
+            // Update each circle's radius and rotation
+            for (let i = 0; i < completedCirclesToBePushed; i++) {
+                const circle = this.getCircleState(i);
+                // Update radius
+                const distanceFromNewest = completedCirclesToBePushed - circle.index - 1;
+                const newTargetRadius = baseRadius + (radiusIncrement * (distanceFromNewest + 1));
+                circle.updateTargetRadius(currentTime, newTargetRadius);
+                circle.startRotation(currentTime);
+
+                // Start dot transition for the arcs in the latest completed circle
+                this.arcs.filter(arc => arc.circle == completedCirclesToBePushed - 1).forEach(arc => {
+                    arc.startDotTransition(currentTime);
+                });
+            }
         }
 
+        // Update and draw all circles
+        for (let i = 0; i < this.circles.length; i++) {
+            // Update rotation
+            this.getCircleState(i).updatePosition(currentTime);
+        }
         
-      // Draw and update all arcs
-            this.arcs.forEach(arc => {
-                if (arc.circle < completedCirclesToBePushed) {
-                    arc.startDotTransition(currentTime);
-                }
-
-                arc.updateStates(currentTime);
-                drawArc(arc, currentTime);
-            });
-        
-        this.lastFrameTime = currentTime;
+        // Draw and update all arcs
+        this.arcs.forEach(arc => {
+            arc.updateStates(currentTime);
+            drawArc(arc, currentTime);
+        });
     }
-      isAnimating() {
+
+    isAnimating() {
         // Always animate if we have any circles to rotate
         const completedCircles = Math.floor(this.arcs.length / totalDivisions)
         return completedCircles > 0 || 
-               this.arcs.some(arc => arc.isAnimating);
+               this.arcs.some(arc => arc.isAnimating());
     }
 }
 
