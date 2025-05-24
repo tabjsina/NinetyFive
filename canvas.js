@@ -2,6 +2,22 @@
 const canvas = document.getElementById('myCanvas');
 const ctx = canvas.getContext('2d');
 
+let centerX = canvas.width / 2;  // Will be updated by resizeCanvas
+let centerY = canvas.height / 2; // Will be updated by resizeCanvas
+
+// Set canvas size to window size
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    centerX = canvas.width / 2;
+    centerY = canvas.height / 2;
+    requestAnimationFrame && requestAnimationFrame(animate);
+}
+
+// Handle window resizing
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
 // Helper function for bobble animation
 function getBobbleScale(progress, maxScale = 1.0) {
     // Maximum scale --> 1.0 == +100% scale (i.e. double)
@@ -9,9 +25,7 @@ function getBobbleScale(progress, maxScale = 1.0) {
 }
 
 // Set up arc properties
-const centerX = canvas.width / 2;
-const centerY = canvas.height / 2;
-const baseRadius = 100;
+const baseRadius = 85;
 const radiusIncrement = 20;
 const totalDivisions = 19;
 const maxCircles = 5;
@@ -92,11 +106,6 @@ class StateManager {
 
 const stateManager = new StateManager();
 
-// Style settings
-ctx.strokeStyle = '#ff7954';
-ctx.lineWidth = 10;
-ctx.lineCap = 'round';
-
 // Draw initial completion text
 drawCompletionText(performance.now());
 
@@ -146,6 +155,11 @@ function drawCompletionText(currentTime) {
 
 function animate(currentTime) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Style settings
+    ctx.strokeStyle = '#ff7954';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
     
     // Update circle states
     stateManager.updateAndDrawCircles(currentTime);

@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas Box Demo</title>
-    <style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Canvas Box Demo</title><style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+        }
         canvas {
-            border: 1px solid black;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
 <body>
-    <canvas id="myCanvas" width="400" height="400"></canvas>
+    <canvas id="myCanvas"></canvas>
     <script src="circleState.js"></script>
     <script src="arcState.js"></script>
     <script src="canvas.js"></script>
