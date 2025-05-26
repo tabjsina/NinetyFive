@@ -65,7 +65,7 @@ class StateManager {
 
         // get clip region for non-cached arcs (i.e. the parts that may be moving).
         var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
-        if (this.arcsOnLastUpdate !== numArcsCached) {
+        if (this.arcsOnLastUpdate !== numArcsCached || !clipRegion) {
             this.arcsOnLastUpdate = numArcsCached;
             const donutPath = new Path2D();
             donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + 15, 0, Math.PI * 2); // Partial arc
@@ -182,7 +182,7 @@ function resizeCanvas() {
     stateManager.arcs.forEach(arc => {
         arc.isCached = false; // Reset cached arcs on resize
     });
-    stateManager.clipRegion = null; // Reset clip region
+    clipRegion = null; // Reset clip region
 
     startAnimation();
 }
