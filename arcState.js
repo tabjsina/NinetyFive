@@ -5,6 +5,7 @@ class ArcState {
         this.startTime = startTime;
         this.isEntryAnimating = true;
         this.circle = Math.floor(index / totalDivisions);
+        this.isCached = false;
         this.positionInCircle = index % totalDivisions;
         this.circleManager = circleManager;
         this.isDotTransitionAnimating = false;
@@ -64,8 +65,7 @@ class ArcState {
                         1
                     );
                 }
-                else
-                {
+                else {
                     this.isDotTransitionAnimating = false;
                 }
             }

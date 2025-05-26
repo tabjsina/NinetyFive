@@ -1,5 +1,6 @@
 // CircleState class definition
-class CircleState {    constructor(index) {
+class CircleState {
+    constructor(index) {
         this.index = index;
         this.radius = baseRadius;
         this.targetRadius = baseRadius;
@@ -30,8 +31,7 @@ class CircleState {    constructor(index) {
                 this.isAnimating = false;
                 this.radius = this.targetRadius;
             }
-            else
-            {
+            else {
                 const bounceProgress = 1 + Math.sin(progress * Math.PI) * Math.exp(-progress * 3) * 5;
                 const oldRadius = this.radius;
                 this.radius = oldRadius + ((this.targetRadius - oldRadius) * progress * bounceProgress);
