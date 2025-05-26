@@ -84,4 +84,8 @@ class ArcState {
     isAnimating() {
         return this.isEntryAnimating || this.isDotTransitionAnimating;
     }
+
+    isDot() {
+        return this.dotTransitionProgress >= 1;
+    }
 }

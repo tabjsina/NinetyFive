@@ -30,7 +30,7 @@ class StateManager {
         this.lastClickCount = totalDivisions * maxCircles;
         this.textBobbleStartTime = null;
         this.isTextCached = false;
-        this.arcsSinceLastClip = 0;
+        this.arcsOnLastUpdate = -1;
     }
 
     getCircleState(index) {
@@ -75,12 +75,11 @@ class StateManager {
             const clipArcPadding = (arcLength - arcSegmentLength) / 2;
             // Clip from radius 2 to 3 (partial circle)
 
-            var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
             const innerRingPath = new Path2D();
 
             if (numArcsCached !== 0) {
                 innerRingPath.moveTo(centerX + 30 * Math.cos(startingArcPosition - clipArcPadding), centerY + 30 * Math.sin(startingArcPosition - clipArcPadding));
-                var lastCachedArcEnd = startingArcPosition + this.arcs.filter(arc => arc.isCached).length * arcLength;
+                var lastCachedArcEnd = startingArcPosition + numArcsCached * arcLength;
                 innerRingPath.arc(centerX, centerY, baseRadius + 15, startingArcPosition - clipArcPadding, lastCachedArcEnd - clipArcPadding, true); // Partial arc
                 innerRingPath.arc(centerX, centerY, baseRadius - 15, lastCachedArcEnd - clipArcPadding, startingArcPosition - clipArcPadding, false); // Inner boundary
             }
@@ -137,7 +136,7 @@ class StateManager {
             if (arc.isAnimating()) {
                 // Always draw animating arcs to main canvas
                 drawArc(arc, currentTime, ctx);
-            } else if (arc.circle === latestCircleIndex) {
+            } else if (!arc.isDot()) {
                 // For static arcs in the latest circle, cache them in inner circle canvas if caching is enabled
                 if (!arc.isCached) {
                     cachedArcsToDraw.push(arc);
@@ -165,8 +164,6 @@ class StateManager {
     }
 }
 
-const stateManager = new StateManager();
-
 // Set canvas size to window size accounting for device pixel ratio
 function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
@@ -181,12 +178,14 @@ function resizeCanvas() {
     centerX = rect.width / 2;
     centerY = rect.height / 2;
 
-    requestAnimationFrame && requestAnimationFrame(animate);
-}
+    stateManager.isTextCached = false;
+    stateManager.arcs.forEach(arc => {
+        arc.isCached = false; // Reset cached arcs on resize
+    });
+    stateManager.clipRegion = null; // Reset clip region
 
-// Handle window resizing
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+    startAnimation();
+}
 
 // Helper function for bobble animation
 function getBobbleScale(progress, maxScale = 1.0) {
@@ -194,9 +193,17 @@ function getBobbleScale(progress, maxScale = 1.0) {
     return 1 + Math.sin(progress * Math.PI) * Math.exp(-progress * 3) * maxScale;
 }
 
+let stateManager;
+function init() {
+    stateManager = new StateManager();
 
-// Draw initial completion text
-drawCompletionText(performance.now());
+    // Handle window resizing
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Draw initial completion text
+    drawCompletionText(performance.now());
+}
 
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
 
@@ -257,6 +264,7 @@ function drawCompletionText(currentTime) {
 }
 
 function animate(currentTime) {
+    animationLoopRunning = true;
     // Update circle states
     stateManager.updateAndDrawCircles(currentTime);
 
@@ -267,11 +275,25 @@ function animate(currentTime) {
     if (stateManager.isAnimating()) {
         requestAnimationFrame(animate);
     }
+    else
+    {
+        animationLoopRunning = false;
+    }
+}
+
+let animationLoopRunning = false;
+function startAnimation() {
+    if (!animationLoopRunning) {
+        animationLoopRunning = true;
+        requestAnimationFrame(animate);
+    }
 }
 
 // Handle clicks
 canvas.addEventListener('click', () => {
     if (stateManager.addArc(performance.now())) {
-        requestAnimationFrame(animate);
+        startAnimation();
     }
 });
+
+init();
