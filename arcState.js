@@ -86,6 +86,6 @@ class ArcState {
     }
 
     isDot() {
-        return this.dotTransitionProgress >= 1;
+        return this.dotTransitionProgress > 0;
     }
 }

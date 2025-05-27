@@ -6,12 +6,14 @@ let centerX = canvas.width / 2;  // Will be updated by resizeCanvas
 let centerY = canvas.height / 2; // Will be updated by resizeCanvas
 
 // Set up arc properties
-const baseRadius = 85;
+const baseRadius = 80;
 const radiusIncrement = 20;
 const totalDivisions = 19;
 const maxCircles = 5;
 const arcLength = (2 * Math.PI) / totalDivisions;
-const arcSegmentLength = arcLength / 2;
+const arcSegmentLength = arcLength / 3;
+const ARC_LENGTH_MIDPOINT = arcLength / 2;
+const MAX_ROTATIONAL_OFFSET = ARC_LENGTH_MIDPOINT / 2;
 
 // Animation properties
 const textTapAnimDuration = 400;
@@ -30,6 +32,29 @@ class StateManager {
         this.isTextCached = false;
         this.arcsOnLastUpdate = -1;
         this.clipRegion = null;
+        this.baseRotation = 0;
+        this.lastRotationFrameTime = null;
+        this.rotationSpeed = 0;
+    }
+
+    updateRotation(currentTime) {
+        if (this.rotationSpeed !== 0) {
+            if (this.lastRotationFrameTime === null) {
+                this.lastRotationFrameTime = currentTime;
+                return;
+            }
+            const deltaTime = (currentTime - this.lastRotationFrameTime) / 1000;
+            this.baseRotation += this.rotationSpeed * deltaTime;
+            this.baseRotation = this.baseRotation % (Math.PI * 2);
+            this.lastRotationFrameTime = currentTime;
+        }
+    }
+
+    tryStartRotation(currentTime) {
+        if (this.rotationSpeed === 0) {
+            this.lastRotationFrameTime = currentTime;
+            this.rotationSpeed = 0.075;
+        }
     }
 
     resetCache() {
@@ -86,7 +111,7 @@ class StateManager {
             const innerRingPath = new Path2D();
 
             if (numArcsCached !== 0) {
-                innerRingPath.moveTo(centerX + 30 * Math.cos(startingArcPosition - clipArcPadding), centerY + 30 * Math.sin(startingArcPosition - clipArcPadding));
+                innerRingPath.moveTo(centerX + (baseRadius + 15) * Math.cos(startingArcPosition - clipArcPadding), centerY + (baseRadius + 15) * Math.sin(startingArcPosition - clipArcPadding));
                 var lastCachedArcEnd = startingArcPosition + numArcsCached * arcLength;
                 innerRingPath.arc(centerX, centerY, baseRadius + 15, startingArcPosition - clipArcPadding, lastCachedArcEnd - clipArcPadding, true); // Partial arc
                 innerRingPath.arc(centerX, centerY, baseRadius - 15, lastCachedArcEnd - clipArcPadding, startingArcPosition - clipArcPadding, false); // Inner boundary
@@ -110,6 +135,8 @@ class StateManager {
         var circleWasJustCompleted = this.completedCirclesOnLastUpdate < completedCircles;
         this.completedCirclesOnLastUpdate = completedCircles;
         if (circleWasJustCompleted) {
+            this.tryStartRotation(currentTime);
+            
             // Update each circle's radius and rotation
             for (let i = 0; i < completedCirclesToBePushed; i++) {
                 const circle = this.getCircleState(i);
@@ -117,11 +144,10 @@ class StateManager {
                 const distanceFromNewest = completedCirclesToBePushed - circle.index - 1;
                 const newTargetRadius = baseRadius + (radiusIncrement * (distanceFromNewest + 1));
                 circle.updateTargetRadius(currentTime, newTargetRadius);
-                circle.startRotation(currentTime);
-
-                // Start dot transition for the arcs in the latest completed circle
-                this.arcs.filter(arc => arc.circle == completedCirclesToBePushed - 1).forEach(arc => {
-                });
+                if (circle.index == completedCircles - 1) {
+                    var previousCircleOffset = circle.index > 0 ? this.getCircleState(circle.index - 1).rotationOffset : 0;
+                    circle.setRotationOffset(this.baseRotation, previousCircleOffset);
+                }
             }
         }
 
@@ -225,7 +251,8 @@ function drawArc(arcState, currentTime) {
     const { segmentLength, offset } = arcState.getArcProperties();
 
     const baseStartAngle = arcState.positionInCircle * (arcLength) + startingArcPosition;
-    const startAngle = baseStartAngle + circle.rotation + offset;
+    const rotation = arcState.isDot() ? (stateManager.baseRotation - circle.rotationOffset) : 0;
+    const startAngle = baseStartAngle + rotation + offset;
     const endAngle = startAngle + segmentLength;
 
     ctx.beginPath();
@@ -276,6 +303,8 @@ function drawCompletionText(currentTime) {
 
 function animate(currentTime) {
     animationLoopRunning = true;
+    // Update rotation
+    stateManager.updateRotation(currentTime);
     // Update circle states
     stateManager.updateAndDrawCircles(currentTime);
 
