@@ -58,13 +58,13 @@ class ArcState {
 
     updateDotTransition(currentTime) {
         if (this.isDotTransitionAnimating) {
-            if (this.dotTransitionProgress < 1) {
-                this.dotTransitionProgress = Math.min(
-                    (currentTime - this.dotTransitionStartTime) / dotTransitionDuration,
-                    1
-                );
-            }
-            else {
+            this.dotTransitionProgress = Math.min(
+                (currentTime - this.dotTransitionStartTime) / dotTransitionDuration,
+                1
+            );
+
+
+            if (this.dotTransitionProgress >= 1) {
                 this.isDotTransitionAnimating = false;
             }
         }
