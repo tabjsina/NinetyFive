@@ -32,6 +32,15 @@ class StateManager {
         this.clipRegion = null;
     }
 
+    resetCache() {
+        this.isTextCached = false;
+        this.arcs.forEach(arc => {
+            arc.isCached = false;
+        });
+        this.clipRegion = null;
+        this.arcsOnLastUpdate = -1;
+    }
+
     getCircleState(index) {
         // Grow array if needed
         while (this.circles.length <= index) {
@@ -173,17 +182,12 @@ function resizeCanvas() {
 
     // Scale all drawing operations by the dpr
     ctx.scale(dpr, dpr);
-
+    
     // Update center coordinates (using CSS pixels)
     centerX = rect.width / 2;
     centerY = rect.height / 2;
 
-    stateManager.isTextCached = false;
-    stateManager.arcs.forEach(arc => {
-        arc.isCached = false; // Reset cached arcs on resize
-    });
-    stateManager.clipRegion = null; // Reset clip region
-
+    stateManager.resetCache();
     startAnimation();
 }
 
