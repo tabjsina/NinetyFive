@@ -6,7 +6,7 @@ class ArcState {
         this.circle = Math.floor(index / totalDivisions);
         this.isCached = false;
         this.positionInCircle = index % totalDivisions;
-        this.isEntryAnimating = this.positionInCircle !== (totalDivisions - 1) || this.circle === 4;
+        this.isEntryAnimating = this.positionInCircle !== (totalDivisions - 1) || this.circle === (maxCircles - 1);
         this.circleManager = circleManager;
         this.isDotTransitionAnimating = false;
         this.dotTransitionStartTime = null;

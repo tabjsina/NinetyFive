@@ -12,6 +12,7 @@ const totalDivisions = 19;
 const maxCircles = 5;
 const arcLength = (2 * Math.PI) / totalDivisions;
 const arcSegmentLength = arcLength / 3;
+const arcGap = arcLength - arcSegmentLength;
 const ARC_LENGTH_MIDPOINT = arcLength / 2;
 const MAX_ROTATIONAL_OFFSET = ARC_LENGTH_MIDPOINT / 2;
 
@@ -51,7 +52,7 @@ class StateManager {
     }
 
     tryStartRotation(currentTime) {
-        if (this.rotationSpeed === 0) {
+        if (this.lastRotationFrameTime === null) {
             this.lastRotationFrameTime = currentTime;
             this.rotationSpeed = 0.075;
         }
@@ -161,7 +162,7 @@ class StateManager {
         var cachedArcsToDraw = [];
 
         this.arcs.forEach(arc => {
-            if (circleWasJustCompleted && arc.circle !== 4) {
+            if (circleWasJustCompleted && arc.circle !== (maxCircles - 1)) {
                 arc.isCached = false;
                 arc.startDotTransition(currentTime);
             }
@@ -285,8 +286,7 @@ function drawCompletionText(currentTime) {
 
     if (!stateManager.isTextCached) {
         // only clear the text area.
-        ctx.clearRect(centerX - 40, centerY - 40, 80, 80);
-
+        ctx.clearRect(centerX - 45, centerY - 45, 90, 90);
         if (remainingClicks <= 0) {
             // don't need to display anything when no clicks are remaining
             stateManager.isTextCached = true;

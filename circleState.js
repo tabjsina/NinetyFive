@@ -24,8 +24,8 @@ class CircleState {
     setRotationOffset(startingOffset, offsetToApproach) {
         // Normalize starting offset to be within one arc length
         this.startingRotationOffset = startingOffset % arcLength;
-        if (this.startingRotationOffset > ARC_LENGTH_MIDPOINT) {
-            this.startingRotationOffset -= arcLength; // Make offset be +- from 0.
+        if (this.startingRotationOffset > arcGap) {
+            this.startingRotationOffset -= arcLength;
         }
 
         // Calculate the shortest path to the previous circle's offset
