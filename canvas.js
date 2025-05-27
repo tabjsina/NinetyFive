@@ -246,21 +246,37 @@ function init() {
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
 
 function drawArc(arcState, currentTime) {
-    const scale = arcState.getScale(currentTime);
     const circle = stateManager.getCircleState(arcState.circle);
     const { segmentLength, offset } = arcState.getArcProperties();
 
     const baseStartAngle = arcState.positionInCircle * (arcLength) + startingArcPosition;
     const rotation = arcState.isDot() ? (stateManager.baseRotation - circle.rotationOffset) : 0;
     const startAngle = baseStartAngle + rotation + offset;
-    const endAngle = startAngle + segmentLength;
+    const radius = arcState.getRadius();
 
     ctx.beginPath();
     ctx.strokeStyle = '#ff7954';
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 10 * scale;
-    ctx.arc(centerX, centerY, arcState.getRadius(currentTime), startAngle, endAngle);
-    ctx.stroke();
+
+    if (arcState.isDot() && !arcState.isDotTransitionAnimating) {
+        // Calculate position along the circle's circumference
+        const x = centerX + radius * Math.cos(startAngle);
+        const y = centerY + radius * Math.sin(startAngle);
+
+        // Draw a circle at the calculated position
+        ctx.fillStyle = '#ff7954';
+        const dotRadius = 5; // Adjust this value to change dot size
+        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    else
+    {
+        const scale = arcState.getScale(currentTime);
+        const endAngle = startAngle + segmentLength;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 10 * scale;
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.stroke();
+    }
 }
 
 function drawCompletionText(currentTime) {
