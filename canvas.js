@@ -13,12 +13,10 @@ const maxCircles = 5;
 const arcLength = (2 * Math.PI) / totalDivisions;
 const arcSegmentLength = arcLength / 2;
 
-let clipRegion;
-
 // Animation properties
 const textTapAnimDuration = 400;
 const arcEntryAnimDuration = 700;
-const radiusExpandDuration = 3000;
+const radiusExpandDuration = 400;
 const dotTransitionDuration = 400;
 
 class StateManager {
@@ -31,6 +29,7 @@ class StateManager {
         this.textBobbleStartTime = null;
         this.isTextCached = false;
         this.arcsOnLastUpdate = -1;
+        this.clipRegion = null;
     }
 
     getCircleState(index) {
@@ -65,7 +64,7 @@ class StateManager {
 
         // get clip region for non-cached arcs (i.e. the parts that may be moving).
         var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
-        if (this.arcsOnLastUpdate !== numArcsCached || !clipRegion) {
+        if (this.arcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
             this.arcsOnLastUpdate = numArcsCached;
             const donutPath = new Path2D();
             donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + 15, 0, Math.PI * 2); // Partial arc
@@ -92,11 +91,11 @@ class StateManager {
             const combinedPath = new Path2D();
             combinedPath.addPath(donutPath);
             combinedPath.addPath(innerRingPath);
-            clipRegion = combinedPath;
+            this.clipRegion = combinedPath;
         }
 
         ctx.save();
-        ctx.clip(clipRegion);
+        ctx.clip(this.clipRegion);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         var circleWasJustCompleted = this.completedCirclesOnLastUpdate < completedCircles;
@@ -135,7 +134,7 @@ class StateManager {
             arc.updateStates(currentTime);
             if (arc.isAnimating()) {
                 // Always draw animating arcs to main canvas
-                drawArc(arc, currentTime, ctx);
+                drawArc(arc, currentTime);
             } else if (!arc.isDot()) {
                 // For static arcs in the latest circle, cache them in inner circle canvas if caching is enabled
                 if (!arc.isCached) {
@@ -143,15 +142,16 @@ class StateManager {
                 }
             } else {
                 // All other arcs go to main canvas
-                drawArc(arc, currentTime, ctx);
+                drawArc(arc, currentTime);
             }
         });
 
         // Restore the canvas state to remove clipping
         ctx.restore();
 
+        // arcs that are about to be cached need to be drawn after the clipping is removed.
         cachedArcsToDraw && cachedArcsToDraw.forEach(arc => {
-            drawArc(arc, currentTime, ctx);
+            drawArc(arc, currentTime);
             arc.isCached = true; // Mark as cached
         });
     }
@@ -182,15 +182,23 @@ function resizeCanvas() {
     stateManager.arcs.forEach(arc => {
         arc.isCached = false; // Reset cached arcs on resize
     });
-    clipRegion = null; // Reset clip region
+    stateManager.clipRegion = null; // Reset clip region
 
     startAnimation();
 }
 
-// Helper function for bobble animation
-function getBobbleScale(progress, maxScale = 1.0) {
-    // Maximum scale --> 1.0 == +100% scale (i.e. double)
-    return 1 + Math.sin(progress * Math.PI) * Math.exp(-progress * 3) * maxScale;
+// Helper function for pulsing animation
+function getPulseScale(progress, startingSize, maxSize) {
+    var maxScale = maxSize / startingSize;
+    // Maximum scale --> 2.0 == the object will reach ~2x scale (i.e. double size)
+    return startingSize + Math.sin(progress * Math.PI) * Math.exp(-progress * 3.01) * 3 * (maxSize - startingSize);
+}
+
+function easeOutBack(originalValue, finalValue, progress) {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+
+    return originalValue + (finalValue - originalValue) * (1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2));
 }
 
 let stateManager;
@@ -207,7 +215,7 @@ function init() {
 
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
 
-function drawArc(arcState, currentTime, canvasCtx) {
+function drawArc(arcState, currentTime) {
     const scale = arcState.getScale(currentTime);
     const circle = stateManager.getCircleState(arcState.circle);
     const { segmentLength, offset } = arcState.getArcProperties();
@@ -216,12 +224,12 @@ function drawArc(arcState, currentTime, canvasCtx) {
     const startAngle = baseStartAngle + circle.rotation + offset;
     const endAngle = startAngle + segmentLength;
 
-    canvasCtx.beginPath();
-    canvasCtx.strokeStyle = '#ff7954';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.lineWidth = 10 * scale;
-    canvasCtx.arc(centerX, centerY, arcState.getRadius(currentTime), startAngle, endAngle);
-    canvasCtx.stroke();
+    ctx.beginPath();
+    ctx.strokeStyle = '#ff7954';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 10 * scale;
+    ctx.arc(centerX, centerY, arcState.getRadius(currentTime), startAngle, endAngle);
+    ctx.stroke();
 }
 
 function drawCompletionText(currentTime) {
@@ -239,21 +247,20 @@ function drawCompletionText(currentTime) {
         }
 
         var shouldCacheText = true;
-        let scale = 1;
+        let fontSize = 50;
         if (stateManager.textBobbleStartTime) {
             shouldCacheText = false;
             const progress = Math.min((currentTime - stateManager.textBobbleStartTime) / textTapAnimDuration, 1);
             if (progress >= 1) {
                 stateManager.textBobbleStartTime = null;
             } else {
-                scale = getBobbleScale(progress, 0.7);
+                fontSize = Math.floor(getPulseScale(progress, fontSize, 60));
             }
         }
 
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const fontSize = Math.floor(40 * scale);
         ctx.font = `${fontSize}px Arial`;
         ctx.fillStyle = '#666666';
         ctx.fillText(`${remainingClicks}`, centerX, centerY);

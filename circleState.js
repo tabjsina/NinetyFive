@@ -3,6 +3,7 @@ class CircleState {
     constructor(index) {
         this.index = index;
         this.radius = baseRadius;
+        this.oldRadius = baseRadius;
         this.targetRadius = baseRadius;
         this.isAnimating = false;
         this.animationStartTime = null;
@@ -14,6 +15,7 @@ class CircleState {
     updateTargetRadius(currentTime, newTargetRadius) {
         if (this.targetRadius !== newTargetRadius) {
             this.targetRadius = newTargetRadius;
+            this.oldRadius = this.radius;
             this.animationStartTime = currentTime;
             this.isAnimating = true;
         }
@@ -30,11 +32,10 @@ class CircleState {
             if (progress >= 1) {
                 this.isAnimating = false;
                 this.radius = this.targetRadius;
+                this.oldRadius = this.targetRadius;
             }
             else {
-                const bounceProgress = 1 + Math.sin(progress * Math.PI) * Math.exp(-progress * 3) * 5;
-                const oldRadius = this.radius;
-                this.radius = oldRadius + ((this.targetRadius - oldRadius) * progress * bounceProgress);
+                this.radius = easeOutBack(this.oldRadius, this.targetRadius, progress);
             }
         }
 

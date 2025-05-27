@@ -18,7 +18,7 @@ class ArcState {
         if (this.isEntryAnimating) {
             const progress = Math.min((currentTime - this.startTime) / arcEntryAnimDuration, 1);
             if (progress < 1) {
-                return getBobbleScale(progress);
+                return getPulseScale(progress, 1, 1.3);
             }
 
             this.isEntryAnimating = false;
