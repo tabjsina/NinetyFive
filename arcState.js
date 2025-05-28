@@ -1,19 +1,30 @@
-// ArcState class definition
 class ArcState {
-    constructor(index, startTime, stateManager) {
+    static ArcAnimationState = {
+        ENTRY_ANIMATING: 0,
+        ARC: 1,
+        ARC_TO_DOT_ANIMATING: 2,
+        DOT: 3
+    };
+
+    constructor(index, creationTime, stateManager) {
         this.index = index;
-        this.startTime = startTime;
+        this.creationTime = creationTime;
         const circleIndex = Math.floor(index / TOTAL_DIVISIONS);
         this.circle = stateManager.getCircleState(circleIndex);
         this.positionInCircle = index % TOTAL_DIVISIONS;
-        this.isEntryAnimating = this.positionInCircle !== (TOTAL_DIVISIONS - 1) || circleIndex === FINAL_CIRCLE_INDEX;
         this.stateManager = stateManager;
-        this.isDotTransitionAnimating = false;
         this.dotTransitionStartTime = null;
         this.dotTransitionProgress = 0;
         this.scale = 1;
         this.startAngleCenteringOffset = 0;
         this.segmentLength = ARC_SEGMENT_LENGTH;
+        
+        // Initialize state based on position
+        if (this.positionInCircle === (TOTAL_DIVISIONS - 1) && circleIndex !== FINAL_CIRCLE_INDEX) {
+            this.currentState = ArcState.ArcAnimationState.ARC;
+        } else {
+            this.currentState = ArcState.ArcAnimationState.ENTRY_ANIMATING;
+        }
     }
 
     getScale() {
@@ -21,14 +32,14 @@ class ArcState {
     }
 
     updateScale(currentTime) {
-        if (this.isEntryAnimating) {
-            const progress = Math.min((currentTime - this.startTime) / ARC_ENTRY_ANIM_DURATION, 1);
+        if (this.currentState === ArcState.ArcAnimationState.ENTRY_ANIMATING) {
+            const progress = Math.min((currentTime - this.creationTime) / ARC_ENTRY_ANIM_DURATION, 1);
             if (progress < 1) {
                 this.scale = getPulseScale(progress, 1, 1.3);
                 return;
             }
 
-            this.isEntryAnimating = false;
+            this.currentState = ArcState.ArcAnimationState.ARC;
         }
 
         this.scale = 1;
@@ -39,14 +50,14 @@ class ArcState {
     }
 
     updateDotTransition(currentTime) {
-        if (this.isDotTransitionAnimating) {
+        if (this.currentState === ArcState.ArcAnimationState.ARC_TO_DOT_ANIMATING) {
             this.dotTransitionProgress = Math.min(
                 (currentTime - this.dotTransitionStartTime) / DOT_TRANSITION_DURATION,
                 1
             );
 
             if (this.dotTransitionProgress >= 1) {
-                this.isDotTransitionAnimating = false;
+                this.currentState = ArcState.ArcAnimationState.DOT;
             }
 
             // Smooth transition from arc to dot
@@ -58,23 +69,24 @@ class ArcState {
     }
 
     updateStates(currentTime) {
-        this.updateDotTransition(currentTime);
         this.updateScale(currentTime);
+        this.updateDotTransition(currentTime);
     }
 
     startDotTransition(currentTime) {
-        if (!this.dotTransitionStartTime) {
-            this.isDotTransitionAnimating = true;
+        if (this.currentState <= ArcState.ArcAnimationState.ARC) {
+            this.currentState = ArcState.ArcAnimationState.ARC_TO_DOT_ANIMATING;
             this.dotTransitionStartTime = currentTime;
         }
     }
 
     isAnimating() {
-        return this.isEntryAnimating || this.isDotTransitionAnimating;
+        return this.currentState === ArcState.ArcAnimationState.ENTRY_ANIMATING || 
+               this.currentState === ArcState.ArcAnimationState.ARC_TO_DOT_ANIMATING;
     }
 
     isDot() {
-        return this.dotTransitionProgress >= 1;
+        return this.currentState >= ArcState.ArcAnimationState.DOT;
     }
 
     getStartAngle() {
