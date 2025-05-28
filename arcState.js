@@ -1,14 +1,14 @@
 // ArcState class definition
 class ArcState {
-    constructor(index, startTime, circleManager) {
+    constructor(index, startTime, stateManager) {
         this.index = index;
         this.startTime = startTime;
         const circleIndex = Math.floor(index / totalDivisions);
-        this.circle = circleManager.getCircleState(circleIndex);
+        this.circle = stateManager.getCircleState(circleIndex);
         this.isCached = false;
         this.positionInCircle = index % totalDivisions;
         this.isEntryAnimating = this.positionInCircle !== (totalDivisions - 1) || circleIndex === finalCircleIndex;
-        this.circleManager = circleManager;
+        this.stateManager = stateManager;
         this.isDotTransitionAnimating = false;
         this.dotTransitionStartTime = null;
         this.dotTransitionProgress = 0;
@@ -75,6 +75,12 @@ class ArcState {
     }
 
     isDot() {
-        return this.dotTransitionProgress > 0;
+        return this.dotTransitionProgress >= 1;
+    }
+
+    getStartAngle() {
+        const baseStartAngle = this.positionInCircle * arcLength + startingArcPosition;
+        const rotation = this.circle.isRotating ? (this.stateManager.baseRotation - this.circle.rotationOffset) : 0;
+        return baseStartAngle + rotation + this.startAngleCenteringOffset;
     }
 }

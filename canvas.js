@@ -252,15 +252,13 @@ function init() {
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
 
 function drawArc(arcState) {
-    const baseStartAngle = arcState.positionInCircle * (arcLength) + startingArcPosition;
-    const rotation = arcState.isDot() ? (stateManager.baseRotation - arcState.circle.rotationOffset) : 0;
-    const startAngle = baseStartAngle + rotation + arcState.startAngleCenteringOffset;
+    const startAngle = arcState.getStartAngle();
     const radius = arcState.getRadius();
 
     ctx.beginPath();
     ctx.strokeStyle = '#ff7954';
 
-    if (arcState.isDot() && !arcState.isDotTransitionAnimating) {
+    if (arcState.isDot()) {
         // Calculate position along the circle's circumference
         const x = centerX + radius * Math.cos(startAngle);
         const y = centerY + radius * Math.sin(startAngle);

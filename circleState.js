@@ -7,9 +7,10 @@ class CircleState {
         this.targetRadius = baseRadius;
         this.isAnimating = false;
         this.animationStartTime = null;
-        this.rotationOffset = 0; // Offset from base rotation
+        this.rotationOffset = 0; // Current offset from base rotation
         this.targetOffset = 0; // Target offset for rotation
         this.startingRotationOffset = 0; // Initial offset when set
+        this.isRotating = false;
     }
 
     updateTargetRadius(currentTime, distanceFromInnerRing) {
@@ -24,6 +25,12 @@ class CircleState {
     }
     
     setRotationOffset(startingOffset, offsetToApproach) {
+        if (this.isRotating) {
+            // If already rotating, no need to set again
+            return;
+        }
+
+        this.isRotating = true;
         // Normalize starting offset to be within one arc length
         this.startingRotationOffset = startingOffset % arcLength;
         if (this.startingRotationOffset > arcGap) {
