@@ -11,7 +11,8 @@ const radiusIncrement = 20;
 const totalDivisions = 19;
 const maxCircles = 5;
 const finalCircleIndex = maxCircles - 1;
-const arcLength = (2 * Math.PI) / totalDivisions;
+const TWO_PI = Math.PI * 2;
+const arcLength = TWO_PI / totalDivisions;
 const arcSegmentLength = arcLength / 3;
 const arcGap = arcLength - arcSegmentLength;
 const ARC_LENGTH_MIDPOINT = arcLength / 2;
@@ -47,7 +48,7 @@ class StateManager {
             }
             const deltaTime = (currentTime - this.lastRotationFrameTime) / 1000;
             this.baseRotation += this.rotationSpeed * deltaTime;
-            this.baseRotation = this.baseRotation % (Math.PI * 2);
+            this.baseRotation = this.baseRotation % TWO_PI;
             this.lastRotationFrameTime = currentTime;
         }
     }
@@ -103,25 +104,28 @@ class StateManager {
         if (this.arcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
             this.arcsOnLastUpdate = numArcsCached;
             const donutPath = new Path2D();
-            donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + 15, 0, Math.PI * 2); // Partial arc
-            donutPath.arc(centerX, centerY, baseRadius + 15, Math.PI * 2, 0, true); // Inner boundary
+            const paddingAroundRadius = 15; // Padding around the radius for clipping
+            const innerCirclePaddingOuterRadius = baseRadius + paddingAroundRadius;
+            const innerCirclePaddingInnerRadius = baseRadius - paddingAroundRadius;
+
+            donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + paddingAroundRadius, 0, TWO_PI); // Outer boundary
+            donutPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, TWO_PI, 0, true); // Inner boundary
 
             // Clip padding for rounded edges
-            const clipArcPadding = (arcLength - arcSegmentLength) / 2;
-            // Clip from radius 2 to 3 (partial circle)
 
             const innerRingPath = new Path2D();
 
             if (numArcsCached !== 0) {
-                innerRingPath.moveTo(centerX + (baseRadius + 15) * Math.cos(startingArcPosition - clipArcPadding), centerY + (baseRadius + 15) * Math.sin(startingArcPosition - clipArcPadding));
+                const clipArcPadding = (arcLength - arcSegmentLength) / 2;
+                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(startingArcPosition - clipArcPadding), centerY + innerCirclePaddingOuterRadius * Math.sin(startingArcPosition - clipArcPadding));
                 var lastCachedArcEnd = startingArcPosition + numArcsCached * arcLength;
-                innerRingPath.arc(centerX, centerY, baseRadius + 15, startingArcPosition - clipArcPadding, lastCachedArcEnd - clipArcPadding, true); // Partial arc
-                innerRingPath.arc(centerX, centerY, baseRadius - 15, lastCachedArcEnd - clipArcPadding, startingArcPosition - clipArcPadding, false); // Inner boundary
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, startingArcPosition - clipArcPadding, lastCachedArcEnd - clipArcPadding, true); // Partial arc
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, lastCachedArcEnd - clipArcPadding, startingArcPosition - clipArcPadding, false); // Inner boundary
             }
             else {
-                innerRingPath.moveTo(centerX + (baseRadius + 15) * Math.cos(Math.PI * 2), centerY + (baseRadius + 15) * Math.sin(Math.PI * 2));
-                innerRingPath.arc(centerX, centerY, baseRadius + 15, 0, Math.PI * 2); // Partial arc
-                innerRingPath.arc(centerX, centerY, baseRadius - 15, Math.PI * 2, 0, true); // Inner boundary
+                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(TWO_PI), centerY + innerCirclePaddingOuterRadius * Math.sin(TWO_PI));
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, 0, TWO_PI); // Partial arc
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, TWO_PI, 0, true); // Inner boundary
             }
 
             const combinedPath = new Path2D();
@@ -266,7 +270,7 @@ function drawArc(arcState, currentTime) {
         // Draw a circle at the calculated position
         ctx.fillStyle = '#ff7954';
         const dotRadius = 5; // Adjust this value to change dot size
-        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        ctx.arc(x, y, dotRadius, 0, TWO_PI);
         ctx.fill();
     }
     else
