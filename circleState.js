@@ -1,5 +1,7 @@
 // CircleState class definition
 class CircleState {
+    static RADIUS_EXPAND_DURATION = 400;
+
     constructor(index) {
         this.index = index;
         this.radius = BASE_RADIUS;
@@ -54,7 +56,7 @@ class CircleState {
 
     updatePosition(currentTime) {
         if (this.isAnimating) {
-            const progress = Math.min((currentTime - this.animationStartTime) / RADIUS_EXPAND_DURATION, 1);
+            const progress = Math.min((currentTime - this.animationStartTime) / CircleState.RADIUS_EXPAND_DURATION, 1);
             if (progress >= 1) {
                 this.isAnimating = false;
                 this.radius = this.targetRadius;

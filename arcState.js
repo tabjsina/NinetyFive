@@ -6,6 +6,9 @@ class ArcState {
         DOT: 3
     };
 
+    static ARC_ENTRY_ANIM_DURATION = 700;
+    static DOT_TRANSITION_DURATION = 400;
+
     constructor(index, creationTime, stateManager) {
         this.index = index;
         this.creationTime = creationTime;
@@ -33,7 +36,7 @@ class ArcState {
 
     updateScale(currentTime) {
         if (this.currentState === ArcState.ArcAnimationState.ENTRY_ANIMATING) {
-            const progress = Math.min((currentTime - this.creationTime) / ARC_ENTRY_ANIM_DURATION, 1);
+            const progress = Math.min((currentTime - this.creationTime) / ArcState.ARC_ENTRY_ANIM_DURATION, 1);
             if (progress < 1) {
                 this.scale = getPulseScale(progress, 1, 1.3);
                 return;
@@ -52,7 +55,7 @@ class ArcState {
     updateDotTransition(currentTime) {
         if (this.currentState === ArcState.ArcAnimationState.ARC_TO_DOT_ANIMATING) {
             this.dotTransitionProgress = Math.min(
-                (currentTime - this.dotTransitionStartTime) / DOT_TRANSITION_DURATION,
+                (currentTime - this.dotTransitionStartTime) / ArcState.DOT_TRANSITION_DURATION,
                 1
             );
 

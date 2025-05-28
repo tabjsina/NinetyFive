@@ -19,11 +19,39 @@ const ARC_GAP = ARC_LENGTH - ARC_SEGMENT_LENGTH;
 const ARC_LENGTH_MIDPOINT = ARC_LENGTH / 2;
 const MAX_ROTATIONAL_OFFSET = ARC_LENGTH_MIDPOINT / 2;
 
-// Animation durations (in milliseconds)
-const TEXT_TAP_ANIM_DURATION = 400;
-const ARC_ENTRY_ANIM_DURATION = 700;
-const RADIUS_EXPAND_DURATION = 400;
-const DOT_TRANSITION_DURATION = 400;
+class CounterState {
+    static TEXT_TAP_ANIM_DURATION = 400;
+    static BASE_FONT_SIZE = 50;
+    static MAX_FONT_SIZE = 60;
+
+    constructor() {
+        this.textBobbleStartTime = null;
+        this.isTextCached = false;
+    }
+
+    getFontSize(currentTime) {
+        if (!this.textBobbleStartTime) {
+            return CounterState.BASE_FONT_SIZE;
+        }
+
+        const progress = Math.min((currentTime - this.textBobbleStartTime) / CounterState.TEXT_TAP_ANIM_DURATION, 1);
+        if (progress >= 1) {
+            this.textBobbleStartTime = null;
+            return CounterState.BASE_FONT_SIZE;
+        }
+
+        return Math.floor(getPulseScale(progress, CounterState.BASE_FONT_SIZE, CounterState.MAX_FONT_SIZE));
+    }
+
+    startIncrementAnimation(currentTime) {
+        this.textBobbleStartTime = currentTime;
+        this.isTextCached = false;
+    }
+
+    shouldCache() {
+        return !this.textBobbleStartTime;
+    }
+}
 
 class StateManager {
     constructor() {
@@ -31,9 +59,7 @@ class StateManager {
         this.arcs = [];
         this.completedCirclesOnLastUpdate = 0;
         this.activeCircleIndex = 0;
-        this.lastClickCount = TOTAL_ARCS;
-        this.textBobbleStartTime = null;
-        this.isTextCached = false;
+        this.counterState = new CounterState();
         this.arcsOnLastUpdate = -1;
         this.clipRegion = null;
         this.baseRotation = 0;
@@ -63,7 +89,7 @@ class StateManager {
     }
 
     resetCache() {
-        this.isTextCached = false;
+        this.counterState.isTextCached = false;
         this.cachedArcs.clear();
         this.clipRegion = null;
         this.arcsOnLastUpdate = -1;
@@ -80,11 +106,8 @@ class StateManager {
     addArc(currentTime) {
         if (this.arcs.length < TOTAL_ARCS) {
             const nextArcIndex = this.arcs.length;
-
             this.arcs.push(new ArcState(nextArcIndex, currentTime, this));
-            this.textBobbleStartTime = currentTime;
-            this.isTextCached = false;
-
+            this.counterState.startIncrementAnimation(currentTime);
             return true;
         }
         return false;
@@ -283,27 +306,16 @@ function drawArc(arcState) {
 function drawCompletionText(currentTime) {
     const remainingClicks = TOTAL_ARCS - stateManager.arcs.length;
 
-    if (!stateManager.isTextCached) {
+    if (!stateManager.counterState.isTextCached) {
         // only clear the text area.
         ctx.clearRect(centerX - 45, centerY - 45, 90, 90);
         if (remainingClicks <= 0) {
             // don't need to display anything when no clicks are remaining
-            stateManager.isTextCached = true;
+            stateManager.counterState.isTextCached = true;
             return;
         }
 
-        var shouldCacheText = true;
-        let fontSize = 50;
-        if (stateManager.textBobbleStartTime) {
-            shouldCacheText = false;
-            const progress = Math.min((currentTime - stateManager.textBobbleStartTime) / TEXT_TAP_ANIM_DURATION, 1);
-            if (progress >= 1) {
-                stateManager.textBobbleStartTime = null;
-            } else {
-                fontSize = Math.floor(getPulseScale(progress, fontSize, 60));
-            }
-        }
-
+        const fontSize = stateManager.counterState.getFontSize(currentTime);
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -312,7 +324,7 @@ function drawCompletionText(currentTime) {
         ctx.fillText(`${remainingClicks}`, centerX, centerY);
         ctx.restore();
 
-        stateManager.isTextCached = shouldCacheText;
+        stateManager.counterState.isTextCached = stateManager.counterState.shouldCache();
     }
 }
 
