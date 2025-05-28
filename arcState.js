@@ -5,7 +5,6 @@ class ArcState {
         this.startTime = startTime;
         const circleIndex = Math.floor(index / TOTAL_DIVISIONS);
         this.circle = stateManager.getCircleState(circleIndex);
-        this.isCached = false;
         this.positionInCircle = index % TOTAL_DIVISIONS;
         this.isEntryAnimating = this.positionInCircle !== (TOTAL_DIVISIONS - 1) || circleIndex === FINAL_CIRCLE_INDEX;
         this.stateManager = stateManager;

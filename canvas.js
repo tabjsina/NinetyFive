@@ -39,6 +39,7 @@ class StateManager {
         this.baseRotation = 0;
         this.lastRotationFrameTime = null;
         this.rotationSpeed = 0;
+        this.cachedArcs = new Set();
     }
 
     updateRotation(currentTime) {
@@ -63,9 +64,7 @@ class StateManager {
 
     resetCache() {
         this.isTextCached = false;
-        this.arcs.forEach(arc => {
-            arc.isCached = false;
-        });
+        this.cachedArcs.clear();
         this.clipRegion = null;
         this.arcsOnLastUpdate = -1;
     }
@@ -101,7 +100,7 @@ class StateManager {
         const completedCirclesToBePushed = Math.min(completedCircles, FINAL_CIRCLE_INDEX);
 
         // get clip region for non-cached arcs (i.e. the parts that may be moving).
-        var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
+        var numArcsCached = this.cachedArcs.size;
         if (this.arcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
             this.arcsOnLastUpdate = numArcsCached;
             const paddingAroundRadius = 15; // Padding around the radius for clipping
@@ -169,7 +168,8 @@ class StateManager {
 
         this.arcs.forEach(arc => {
             if (circleWasJustCompleted && arc.circle.index !== FINAL_CIRCLE_INDEX) {
-                arc.isCached = false;
+                // Remove from cache if a circle was just completed
+                this.cachedArcs.delete(arc.index);
                 arc.startDotTransition(currentTime);
             }
 
@@ -179,7 +179,7 @@ class StateManager {
                 drawArc(arc);
             } else if (!arc.isDot()) {
                 // For static arcs in the latest circle, cache them in inner circle canvas if caching is enabled
-                if (!arc.isCached) {
+                if (!this.cachedArcs.has(arc.index)) {
                     cachedArcsToDraw.push(arc);
                 }
             } else {
@@ -194,7 +194,7 @@ class StateManager {
         // arcs that are about to be cached need to be drawn after the clipping is removed.
         cachedArcsToDraw && cachedArcsToDraw.forEach(arc => {
             drawArc(arc);
-            arc.isCached = true; // Mark as cached
+            this.cachedArcs.add(arc.index); // Mark as cached
         });
     }
 
