@@ -48,8 +48,8 @@ class CounterState {
         this.isTextCached = false;
     }
 
-    shouldCache() {
-        return !this.textBobbleStartTime;
+    isAnimating() {
+        return this.textBobbleStartTime;
     }
 }
 
@@ -164,6 +164,9 @@ class StateManager {
         ctx.clip(this.clipRegion);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Update rotation of overall rotating circles
+        stateManager.updateRotation(currentTime);
+
         var circleWasJustCompleted = this.completedCirclesOnLastUpdate < completedCircles;
         this.completedCirclesOnLastUpdate = completedCircles;
         if (circleWasJustCompleted) {
@@ -225,7 +228,8 @@ class StateManager {
         // Always animate if we have any circles to rotate
         const completedCircles = Math.floor(this.arcs.length / TOTAL_DIVISIONS)
         return completedCircles > 0 ||
-            this.arcs.some(arc => arc.isAnimating());
+            this.arcs.some(arc => arc.isAnimating() ||
+            this.counterState.isAnimating());
     }
 }
 
@@ -268,9 +272,6 @@ function init() {
     // Handle window resizing
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-
-    // Draw initial completion text
-    drawCompletionText(performance.now());
 }
 
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
@@ -303,19 +304,17 @@ function drawArc(arcState) {
     }
 }
 
-function drawCompletionText(currentTime) {
-    const remainingClicks = TOTAL_ARCS - stateManager.arcs.length;
-
-    if (!stateManager.counterState.isTextCached) {
+function drawCompletionText(currentTime, counterState, remainingClicks) {
+    if (!counterState.isTextCached) {
         // only clear the text area.
         ctx.clearRect(centerX - 45, centerY - 45, 90, 90);
         if (remainingClicks <= 0) {
             // don't need to display anything when no clicks are remaining
-            stateManager.counterState.isTextCached = true;
+            counterState.isTextCached = true;
             return;
         }
 
-        const fontSize = stateManager.counterState.getFontSize(currentTime);
+        const fontSize = counterState.getFontSize(currentTime);
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -324,19 +323,18 @@ function drawCompletionText(currentTime) {
         ctx.fillText(`${remainingClicks}`, centerX, centerY);
         ctx.restore();
 
-        stateManager.counterState.isTextCached = stateManager.counterState.shouldCache();
+        counterState.isTextCached = !counterState.isAnimating();
     }
 }
 
 function animate(currentTime) {
     animationLoopRunning = true;
-    // Update rotation
-    stateManager.updateRotation(currentTime);
+
     // Update circle states
     stateManager.updateAndDrawCircles(currentTime);
 
     // Draw completion text on top
-    drawCompletionText(currentTime);
+    drawCompletionText(currentTime, stateManager.counterState, TOTAL_ARCS - stateManager.arcs.length);
 
     // Continue animation if any arc is bobbling or any circle is expanding
     if (stateManager.isAnimating()) {
