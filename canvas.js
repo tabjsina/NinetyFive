@@ -162,7 +162,7 @@ class StateManager {
         var cachedArcsToDraw = [];
 
         this.arcs.forEach(arc => {
-            if (circleWasJustCompleted && arc.circle !== (maxCircles - 1)) {
+            if (circleWasJustCompleted && arc.circle.index !== (maxCircles - 1)) {
                 arc.isCached = false;
                 arc.startDotTransition(currentTime);
             }
@@ -247,11 +247,10 @@ function init() {
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
 
 function drawArc(arcState, currentTime) {
-    const circle = stateManager.getCircleState(arcState.circle);
     const { segmentLength, offset } = arcState.getArcProperties();
 
     const baseStartAngle = arcState.positionInCircle * (arcLength) + startingArcPosition;
-    const rotation = arcState.isDot() ? (stateManager.baseRotation - circle.rotationOffset) : 0;
+    const rotation = arcState.isDot() ? (stateManager.baseRotation - arcState.circle.rotationOffset) : 0;
     const startAngle = baseStartAngle + rotation + offset;
     const radius = arcState.getRadius();
 

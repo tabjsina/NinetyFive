@@ -3,10 +3,11 @@ class ArcState {
     constructor(index, startTime, circleManager) {
         this.index = index;
         this.startTime = startTime;
-        this.circle = Math.floor(index / totalDivisions);
+        const circleIndex = Math.floor(index / totalDivisions);
+        this.circle = circleManager.getCircleState(circleIndex);
         this.isCached = false;
         this.positionInCircle = index % totalDivisions;
-        this.isEntryAnimating = this.positionInCircle !== (totalDivisions - 1) || this.circle === (maxCircles - 1);
+        this.isEntryAnimating = this.positionInCircle !== (totalDivisions - 1) || circleIndex === (maxCircles - 1);
         this.circleManager = circleManager;
         this.isDotTransitionAnimating = false;
         this.dotTransitionStartTime = null;
@@ -28,7 +29,7 @@ class ArcState {
     }
 
     getRadius() {
-        return this.circleManager.getCircleState(this.circle).radius;
+        return this.circle.radius;
     }
 
     getArcProperties() {
