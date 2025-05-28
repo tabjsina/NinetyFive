@@ -10,6 +10,7 @@ const baseRadius = 80;
 const radiusIncrement = 20;
 const totalDivisions = 19;
 const maxCircles = 5;
+const finalCircleIndex = maxCircles - 1;
 const arcLength = (2 * Math.PI) / totalDivisions;
 const arcSegmentLength = arcLength / 3;
 const arcGap = arcLength - arcSegmentLength;
@@ -95,7 +96,7 @@ class StateManager {
 
         const completedCircles = Math.floor(this.arcs.length / totalDivisions);
         // Don't want to push the last circle.
-        const completedCirclesToBePushed = Math.min(completedCircles, maxCircles - 1);
+        const completedCirclesToBePushed = Math.min(completedCircles, finalCircleIndex);
 
         // get clip region for non-cached arcs (i.e. the parts that may be moving).
         var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
@@ -162,7 +163,7 @@ class StateManager {
         var cachedArcsToDraw = [];
 
         this.arcs.forEach(arc => {
-            if (circleWasJustCompleted && arc.circle.index !== (maxCircles - 1)) {
+            if (circleWasJustCompleted && arc.circle.index !== finalCircleIndex) {
                 arc.isCached = false;
                 arc.startDotTransition(currentTime);
             }
