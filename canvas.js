@@ -103,28 +103,31 @@ class StateManager {
         var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
         if (this.arcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
             this.arcsOnLastUpdate = numArcsCached;
-            const donutPath = new Path2D();
             const paddingAroundRadius = 15; // Padding around the radius for clipping
             const innerCirclePaddingOuterRadius = baseRadius + paddingAroundRadius;
             const innerCirclePaddingInnerRadius = baseRadius - paddingAroundRadius;
 
-            donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + paddingAroundRadius, 0, TWO_PI); // Outer boundary
-            donutPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, TWO_PI, 0, true); // Inner boundary
-
-            // Clip padding for rounded edges
+            const donutPath = new Path2D();
+            if (completedCirclesToBePushed > 0) {
+                donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + paddingAroundRadius, 0, TWO_PI); // Outer boundary
+                donutPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, TWO_PI, 0, true); // Inner boundary
+            }
 
             const innerRingPath = new Path2D();
-
             if (numArcsCached !== 0) {
-                const clipArcPadding = (arcLength - arcSegmentLength) / 2;
-                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(startingArcPosition - clipArcPadding), centerY + innerCirclePaddingOuterRadius * Math.sin(startingArcPosition - clipArcPadding));
-                var lastCachedArcEnd = startingArcPosition + numArcsCached * arcLength;
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, startingArcPosition - clipArcPadding, lastCachedArcEnd - clipArcPadding, true); // Partial arc
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, lastCachedArcEnd - clipArcPadding, startingArcPosition - clipArcPadding, false); // Inner boundary
-            }
-            else {
-                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(TWO_PI), centerY + innerCirclePaddingOuterRadius * Math.sin(TWO_PI));
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, 0, TWO_PI); // Partial arc
+                // If some arcs are cached, draw a partial inner ring excluding the cached arcs.
+                // The arcs have rounded edges beyond the arc segment length, so offset the starting arc position to account for that.
+                const roundedEndPadding = (arcLength - arcSegmentLength) / 2;
+                const firstCachedArcStart = startingArcPosition - roundedEndPadding;
+                const lastCachedArcEnd = firstCachedArcStart + numArcsCached * arcLength;
+
+                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(firstCachedArcStart), centerY + innerCirclePaddingOuterRadius * Math.sin(firstCachedArcStart));
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, firstCachedArcStart, lastCachedArcEnd, true); // Outer boundary (partial arc)
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, lastCachedArcEnd, firstCachedArcStart, false); // Inner boundary (partial arc)
+            } else {
+                // If no arcs are cached, draw a full inner ring
+                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius, centerY);
+                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, 0, TWO_PI); // Outer boundary
                 innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, TWO_PI, 0, true); // Inner boundary
             }
 
