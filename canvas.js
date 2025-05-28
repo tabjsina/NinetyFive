@@ -5,24 +5,25 @@ const ctx = canvas.getContext('2d');
 let centerX = canvas.width / 2;  // Will be updated by resizeCanvas
 let centerY = canvas.height / 2; // Will be updated by resizeCanvas
 
-// Set up arc properties
-const baseRadius = 80;
-const radiusIncrement = 20;
-const totalDivisions = 19;
-const maxCircles = 5;
-const finalCircleIndex = maxCircles - 1;
+// Geometry constants
+const BASE_RADIUS = 80;
+const RADIUS_INCREMENT = 20;
+const TOTAL_ARCS = 95;
+const TOTAL_DIVISIONS = 19;
+const MAX_CIRCLES = TOTAL_ARCS / TOTAL_DIVISIONS;
+const FINAL_CIRCLE_INDEX = MAX_CIRCLES - 1;
 const TWO_PI = Math.PI * 2;
-const arcLength = TWO_PI / totalDivisions;
-const arcSegmentLength = arcLength / 3;
-const arcGap = arcLength - arcSegmentLength;
-const ARC_LENGTH_MIDPOINT = arcLength / 2;
+const ARC_LENGTH = TWO_PI / TOTAL_DIVISIONS;
+const ARC_SEGMENT_LENGTH = ARC_LENGTH / 3;
+const ARC_GAP = ARC_LENGTH - ARC_SEGMENT_LENGTH;
+const ARC_LENGTH_MIDPOINT = ARC_LENGTH / 2;
 const MAX_ROTATIONAL_OFFSET = ARC_LENGTH_MIDPOINT / 2;
 
-// Animation properties
-const textTapAnimDuration = 400;
-const arcEntryAnimDuration = 700;
-const radiusExpandDuration = 400;
-const dotTransitionDuration = 400;
+// Animation durations (in milliseconds)
+const TEXT_TAP_ANIM_DURATION = 400;
+const ARC_ENTRY_ANIM_DURATION = 700;
+const RADIUS_EXPAND_DURATION = 400;
+const DOT_TRANSITION_DURATION = 400;
 
 class StateManager {
     constructor() {
@@ -30,7 +31,7 @@ class StateManager {
         this.arcs = [];
         this.completedCirclesOnLastUpdate = 0;
         this.activeCircleIndex = 0;
-        this.lastClickCount = totalDivisions * maxCircles;
+        this.lastClickCount = TOTAL_ARCS;
         this.textBobbleStartTime = null;
         this.isTextCached = false;
         this.arcsOnLastUpdate = -1;
@@ -78,7 +79,7 @@ class StateManager {
     }
 
     addArc(currentTime) {
-        if (this.arcs.length < totalDivisions * maxCircles) {
+        if (this.arcs.length < TOTAL_ARCS) {
             const nextArcIndex = this.arcs.length;
 
             this.arcs.push(new ArcState(nextArcIndex, currentTime, this));
@@ -95,21 +96,21 @@ class StateManager {
             return;
         }
 
-        const completedCircles = Math.floor(this.arcs.length / totalDivisions);
+        const completedCircles = Math.floor(this.arcs.length / TOTAL_DIVISIONS);
         // Don't want to push the last circle.
-        const completedCirclesToBePushed = Math.min(completedCircles, finalCircleIndex);
+        const completedCirclesToBePushed = Math.min(completedCircles, FINAL_CIRCLE_INDEX);
 
         // get clip region for non-cached arcs (i.e. the parts that may be moving).
         var numArcsCached = this.arcs.filter(arc => arc.isCached).length;
         if (this.arcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
             this.arcsOnLastUpdate = numArcsCached;
             const paddingAroundRadius = 15; // Padding around the radius for clipping
-            const innerCirclePaddingOuterRadius = baseRadius + paddingAroundRadius;
-            const innerCirclePaddingInnerRadius = baseRadius - paddingAroundRadius;
+            const innerCirclePaddingOuterRadius = BASE_RADIUS + paddingAroundRadius;
+            const innerCirclePaddingInnerRadius = BASE_RADIUS - paddingAroundRadius;
 
             const donutPath = new Path2D();
             if (completedCirclesToBePushed > 0) {
-                donutPath.arc(centerX, centerY, baseRadius + radiusIncrement * completedCirclesToBePushed + paddingAroundRadius, 0, TWO_PI); // Outer boundary
+                donutPath.arc(centerX, centerY, BASE_RADIUS + RADIUS_INCREMENT * completedCirclesToBePushed + paddingAroundRadius, 0, TWO_PI); // Outer boundary
                 donutPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, TWO_PI, 0, true); // Inner boundary
             }
 
@@ -117,9 +118,9 @@ class StateManager {
             if (numArcsCached !== 0) {
                 // If some arcs are cached, draw a partial inner ring excluding the cached arcs.
                 // The arcs have rounded edges beyond the arc segment length, so offset the starting arc position to account for that.
-                const roundedEndPadding = (arcLength - arcSegmentLength) / 2;
+                const roundedEndPadding = ARC_GAP / 2;
                 const firstCachedArcStart = startingArcPosition - roundedEndPadding;
-                const lastCachedArcEnd = firstCachedArcStart + numArcsCached * arcLength;
+                const lastCachedArcEnd = firstCachedArcStart + numArcsCached * ARC_LENGTH;
 
                 innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(firstCachedArcStart), centerY + innerCirclePaddingOuterRadius * Math.sin(firstCachedArcStart));
                 innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, firstCachedArcStart, lastCachedArcEnd, true); // Outer boundary (partial arc)
@@ -145,7 +146,7 @@ class StateManager {
         this.completedCirclesOnLastUpdate = completedCircles;
         if (circleWasJustCompleted) {
             this.tryStartRotation(currentTime);
-            
+
             // Update each circle's radius and rotation
             for (let i = 0; i < completedCirclesToBePushed; i++) {
                 const circle = this.getCircleState(i);
@@ -167,7 +168,7 @@ class StateManager {
         var cachedArcsToDraw = [];
 
         this.arcs.forEach(arc => {
-            if (circleWasJustCompleted && arc.circle.index !== finalCircleIndex) {
+            if (circleWasJustCompleted && arc.circle.index !== FINAL_CIRCLE_INDEX) {
                 arc.isCached = false;
                 arc.startDotTransition(currentTime);
             }
@@ -199,7 +200,7 @@ class StateManager {
 
     isAnimating() {
         // Always animate if we have any circles to rotate
-        const completedCircles = Math.floor(this.arcs.length / totalDivisions)
+        const completedCircles = Math.floor(this.arcs.length / TOTAL_DIVISIONS)
         return completedCircles > 0 ||
             this.arcs.some(arc => arc.isAnimating());
     }
@@ -214,7 +215,7 @@ function resizeCanvas() {
 
     // Scale all drawing operations by the dpr
     ctx.scale(dpr, dpr);
-    
+
     // Update center coordinates (using CSS pixels)
     centerX = rect.width / 2;
     centerY = rect.height / 2;
@@ -269,8 +270,7 @@ function drawArc(arcState) {
         ctx.arc(x, y, dotRadius, 0, TWO_PI);
         ctx.fill();
     }
-    else
-    {
+    else {
         const scale = arcState.getScale();
         const endAngle = startAngle + arcState.segmentLength;
         ctx.lineCap = 'round';
@@ -281,8 +281,7 @@ function drawArc(arcState) {
 }
 
 function drawCompletionText(currentTime) {
-    const totalClicks = totalDivisions * maxCircles;
-    const remainingClicks = totalClicks - stateManager.arcs.length;
+    const remainingClicks = TOTAL_ARCS - stateManager.arcs.length;
 
     if (!stateManager.isTextCached) {
         // only clear the text area.
@@ -297,7 +296,7 @@ function drawCompletionText(currentTime) {
         let fontSize = 50;
         if (stateManager.textBobbleStartTime) {
             shouldCacheText = false;
-            const progress = Math.min((currentTime - stateManager.textBobbleStartTime) / textTapAnimDuration, 1);
+            const progress = Math.min((currentTime - stateManager.textBobbleStartTime) / TEXT_TAP_ANIM_DURATION, 1);
             if (progress >= 1) {
                 stateManager.textBobbleStartTime = null;
             } else {
@@ -331,8 +330,7 @@ function animate(currentTime) {
     if (stateManager.isAnimating()) {
         requestAnimationFrame(animate);
     }
-    else
-    {
+    else {
         animationLoopRunning = false;
     }
 }

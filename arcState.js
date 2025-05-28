@@ -3,18 +3,18 @@ class ArcState {
     constructor(index, startTime, stateManager) {
         this.index = index;
         this.startTime = startTime;
-        const circleIndex = Math.floor(index / totalDivisions);
+        const circleIndex = Math.floor(index / TOTAL_DIVISIONS);
         this.circle = stateManager.getCircleState(circleIndex);
         this.isCached = false;
-        this.positionInCircle = index % totalDivisions;
-        this.isEntryAnimating = this.positionInCircle !== (totalDivisions - 1) || circleIndex === finalCircleIndex;
+        this.positionInCircle = index % TOTAL_DIVISIONS;
+        this.isEntryAnimating = this.positionInCircle !== (TOTAL_DIVISIONS - 1) || circleIndex === FINAL_CIRCLE_INDEX;
         this.stateManager = stateManager;
         this.isDotTransitionAnimating = false;
         this.dotTransitionStartTime = null;
         this.dotTransitionProgress = 0;
         this.scale = 1;
         this.startAngleCenteringOffset = 0;
-        this.segmentLength = arcSegmentLength;
+        this.segmentLength = ARC_SEGMENT_LENGTH;
     }
 
     getScale() {
@@ -23,7 +23,7 @@ class ArcState {
 
     updateScale(currentTime) {
         if (this.isEntryAnimating) {
-            const progress = Math.min((currentTime - this.startTime) / arcEntryAnimDuration, 1);
+            const progress = Math.min((currentTime - this.startTime) / ARC_ENTRY_ANIM_DURATION, 1);
             if (progress < 1) {
                 this.scale = getPulseScale(progress, 1, 1.3);
                 return;
@@ -42,7 +42,7 @@ class ArcState {
     updateDotTransition(currentTime) {
         if (this.isDotTransitionAnimating) {
             this.dotTransitionProgress = Math.min(
-                (currentTime - this.dotTransitionStartTime) / dotTransitionDuration,
+                (currentTime - this.dotTransitionStartTime) / DOT_TRANSITION_DURATION,
                 1
             );
 
@@ -51,9 +51,9 @@ class ArcState {
             }
 
             // Smooth transition from arc to dot
-            this.segmentLength = arcSegmentLength * (1 - this.dotTransitionProgress);
-             // Offset arc start position towards the middle of the segment (so the shrink effect is towards center)
-            const arcSegmentMidpoint = arcSegmentLength / 2;
+            this.segmentLength = ARC_SEGMENT_LENGTH * (1 - this.dotTransitionProgress);
+            // Offset arc start position towards the middle of the segment (so the shrink effect is towards center)
+            const arcSegmentMidpoint = ARC_SEGMENT_LENGTH / 2;
             this.startAngleCenteringOffset = arcSegmentMidpoint * this.dotTransitionProgress;
         }
     }
@@ -79,7 +79,7 @@ class ArcState {
     }
 
     getStartAngle() {
-        const baseStartAngle = this.positionInCircle * arcLength + startingArcPosition;
+        const baseStartAngle = this.positionInCircle * ARC_LENGTH + startingArcPosition;
         const rotation = this.circle.isRotating ? (this.stateManager.baseRotation - this.circle.rotationOffset) : 0;
         return baseStartAngle + rotation + this.startAngleCenteringOffset;
     }
