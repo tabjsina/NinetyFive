@@ -150,9 +150,7 @@ class StateManager {
             for (let i = 0; i < completedCirclesToBePushed; i++) {
                 const circle = this.getCircleState(i);
                 // Update radius
-                const distanceFromNewest = completedCirclesToBePushed - circle.index - 1;
-                const newTargetRadius = baseRadius + (radiusIncrement * (distanceFromNewest + 1));
-                circle.updateTargetRadius(currentTime, newTargetRadius);
+                circle.updateTargetRadius(currentTime, completedCirclesToBePushed - circle.index);
                 if (circle.index == completedCircles - 1) {
                     var previousCircleOffset = circle.index > 0 ? this.getCircleState(circle.index - 1).rotationOffset : 0;
                     circle.setRotationOffset(this.baseRotation, previousCircleOffset);
@@ -166,7 +164,6 @@ class StateManager {
             this.getCircleState(i).updatePosition(currentTime);
         }
         // Draw and update all arcs
-        const latestCircleIndex = Math.floor((this.arcs.length - 1) / totalDivisions);
         var cachedArcsToDraw = [];
 
         this.arcs.forEach(arc => {
@@ -178,7 +175,7 @@ class StateManager {
             arc.updateStates(currentTime);
             if (arc.isAnimating()) {
                 // Always draw animating arcs to main canvas
-                drawArc(arc, currentTime);
+                drawArc(arc);
             } else if (!arc.isDot()) {
                 // For static arcs in the latest circle, cache them in inner circle canvas if caching is enabled
                 if (!arc.isCached) {
@@ -186,7 +183,7 @@ class StateManager {
                 }
             } else {
                 // All other arcs go to main canvas
-                drawArc(arc, currentTime);
+                drawArc(arc);
             }
         });
 
@@ -195,7 +192,7 @@ class StateManager {
 
         // arcs that are about to be cached need to be drawn after the clipping is removed.
         cachedArcsToDraw && cachedArcsToDraw.forEach(arc => {
-            drawArc(arc, currentTime);
+            drawArc(arc);
             arc.isCached = true; // Mark as cached
         });
     }
@@ -254,12 +251,10 @@ function init() {
 
 const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
 
-function drawArc(arcState, currentTime) {
-    const { segmentLength, offset } = arcState.getArcProperties();
-
+function drawArc(arcState) {
     const baseStartAngle = arcState.positionInCircle * (arcLength) + startingArcPosition;
     const rotation = arcState.isDot() ? (stateManager.baseRotation - arcState.circle.rotationOffset) : 0;
-    const startAngle = baseStartAngle + rotation + offset;
+    const startAngle = baseStartAngle + rotation + arcState.startAngleCenteringOffset;
     const radius = arcState.getRadius();
 
     ctx.beginPath();
@@ -278,8 +273,8 @@ function drawArc(arcState, currentTime) {
     }
     else
     {
-        const scale = arcState.getScale(currentTime);
-        const endAngle = startAngle + segmentLength;
+        const scale = arcState.getScale();
+        const endAngle = startAngle + arcState.segmentLength;
         ctx.lineCap = 'round';
         ctx.lineWidth = 10 * scale;
         ctx.arc(centerX, centerY, radius, startAngle, endAngle);

@@ -12,7 +12,9 @@ class CircleState {
         this.startingRotationOffset = 0; // Initial offset when set
     }
 
-    updateTargetRadius(currentTime, newTargetRadius) {
+    updateTargetRadius(currentTime, distanceFromInnerRing) {
+        const newTargetRadius = baseRadius + (radiusIncrement * distanceFromInnerRing);
+
         if (this.targetRadius !== newTargetRadius) {
             this.targetRadius = newTargetRadius;
             this.oldRadius = this.radius;

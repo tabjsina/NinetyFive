@@ -12,49 +12,31 @@ class ArcState {
         this.isDotTransitionAnimating = false;
         this.dotTransitionStartTime = null;
         this.dotTransitionProgress = 0;
-        this.baseCenterOffset = arcSegmentLength / 2;
+        this.scale = 1;
+        this.startAngleCenteringOffset = 0;
+        this.segmentLength = arcSegmentLength;
     }
 
-    getScale(currentTime) {
+    getScale() {
+        return this.scale;
+    }
+
+    updateScale(currentTime) {
         if (this.isEntryAnimating) {
             const progress = Math.min((currentTime - this.startTime) / arcEntryAnimDuration, 1);
             if (progress < 1) {
-                return getPulseScale(progress, 1, 1.3);
+                this.scale = getPulseScale(progress, 1, 1.3);
+                return;
             }
 
             this.isEntryAnimating = false;
         }
 
-        return 1;
+        this.scale = 1;
     }
 
     getRadius() {
         return this.circle.radius;
-    }
-
-    getArcProperties() {
-        if (this.dotTransitionProgress == 0) {
-            return {
-                // Don't let the portion get to 0, otherwise the dot will disappear.
-                segmentLength: arcSegmentLength,
-                offset: 0
-            };
-        }
-        else if (this.dotTransitionProgress >= 1) {
-            return {
-                segmentLength: 0,
-                offset: this.baseCenterOffset
-            };
-        }
-
-        // Smooth transition from arc to dot
-        const arcPortion = 1 - this.dotTransitionProgress;
-        const centerOffset = this.baseCenterOffset * this.dotTransitionProgress;
-        return {
-            // Don't let the portion get to 0, otherwise the dot will disappear.
-            segmentLength: arcSegmentLength * arcPortion,
-            offset: centerOffset // Offset to make arc shrink towards center
-        };
     }
 
     updateDotTransition(currentTime) {
@@ -64,15 +46,21 @@ class ArcState {
                 1
             );
 
-
             if (this.dotTransitionProgress >= 1) {
                 this.isDotTransitionAnimating = false;
             }
+
+            // Smooth transition from arc to dot
+            this.segmentLength = arcSegmentLength * (1 - this.dotTransitionProgress);
+             // Offset arc start position towards the middle of the segment (so the shrink effect is towards center)
+            const arcSegmentMidpoint = arcSegmentLength / 2;
+            this.startAngleCenteringOffset = arcSegmentMidpoint * this.dotTransitionProgress;
         }
     }
 
     updateStates(currentTime) {
         this.updateDotTransition(currentTime);
+        this.updateScale(currentTime);
     }
 
     startDotTransition(currentTime) {
