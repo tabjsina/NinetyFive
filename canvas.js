@@ -66,13 +66,13 @@ class StateManager {
     tryStartAnimation() {
         let animate = (currentTime) => {
             // Update circle states
-            stateManager.updateAndDrawCircles(currentTime);
+            this.updateAndDrawCircles(currentTime);
 
             // Draw completion text on top
-            canvasHelper.drawCounterText(currentTime, stateManager.counterState, TOTAL_ARCS - stateManager.arcs.length);
+            canvasHelper.drawCounterText(currentTime, this.counterState, TOTAL_ARCS - this.arcs.length);
 
             // Continue animation if any arc is bobbling or any circle is expanding
-            if (stateManager.isAnimating()) {
+            if (this.isAnimating()) {
                 requestAnimationFrame(animate);
             } else {
                 this.animationLoopRunning = false;
@@ -143,7 +143,7 @@ class StateManager {
         const completedCirclesToBePushed = Math.min(completedCircles, FINAL_CIRCLE_INDEX);
 
         // Update rotation of overall rotating circles
-        stateManager.updateRotation(currentTime);
+        this.updateRotation(currentTime);
 
         var circleWasJustCompleted = this.completedCirclesOnLastUpdate < completedCircles;
         this.completedCirclesOnLastUpdate = completedCircles;
@@ -266,10 +266,10 @@ class CanvasHelper {
         this.clipRegion = null;
 
         // Handle window resizing
-        window.addEventListener('resize', this.resizeCanvas);
+        window.addEventListener('resize', this.resizeCanvas.bind(this));
 
         this.canvas.addEventListener('click', () => {
-            stateManager.addArc(performance.now());
+            this.stateManager.addArc(performance.now());
         });
     }
 
@@ -292,7 +292,7 @@ class CanvasHelper {
         this.centerX = rect.width / 2;
         this.centerY = rect.height / 2;
 
-        stateManager.resetCache();
+        this.stateManager.resetCache();
     }
 
     clipToUncachedArcs(numArcsCached, numOuterCircles) {
