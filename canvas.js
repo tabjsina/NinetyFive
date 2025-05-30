@@ -1,10 +1,3 @@
-// Get the canvas element
-const canvas = document.getElementById('myCanvas');
-const ctx = canvas.getContext('2d');
-
-let centerX = canvas.width / 2;  // Will be updated by resizeCanvas
-let centerY = canvas.height / 2; // Will be updated by resizeCanvas
-
 // Geometry constants
 const BASE_RADIUS = 80;
 const RADIUS_INCREMENT = 20;
@@ -17,7 +10,10 @@ const ARC_LENGTH = TWO_PI / TOTAL_DIVISIONS;
 const ARC_SEGMENT_LENGTH = ARC_LENGTH / 3;
 const ARC_GAP = ARC_LENGTH - ARC_SEGMENT_LENGTH;
 const ARC_LENGTH_MIDPOINT = ARC_LENGTH / 2;
+const STARTING_ARC_POSITION = - Math.PI / 2; // Start with the first arc at the top
 const MAX_ROTATIONAL_OFFSET = ARC_LENGTH_MIDPOINT / 2;
+const ARC_WIDTH = 10;
+const DOT_RADIUS = ARC_WIDTH / 2;
 
 class CounterState {
     static TEXT_TAP_ANIM_DURATION = 400;
@@ -40,7 +36,7 @@ class CounterState {
             return CounterState.BASE_FONT_SIZE;
         }
 
-        return Math.floor(getPulseScale(progress, CounterState.BASE_FONT_SIZE, CounterState.MAX_FONT_SIZE));
+        return Math.floor(MathUtils.getPulseScale(progress, CounterState.BASE_FONT_SIZE, CounterState.MAX_FONT_SIZE));
     }
 
     startIncrementAnimation(currentTime) {
@@ -60,12 +56,33 @@ class StateManager {
         this.completedCirclesOnLastUpdate = 0;
         this.activeCircleIndex = 0;
         this.counterState = new CounterState();
-        this.arcsOnLastUpdate = -1;
-        this.clipRegion = null;
         this.baseRotation = 0;
         this.lastRotationFrameTime = null;
         this.rotationSpeed = 0;
         this.cachedArcs = new Set();
+        this.animationLoopRunning = false;
+    }
+
+    tryStartAnimation() {
+        let animate = (currentTime) => {
+            // Update circle states
+            stateManager.updateAndDrawCircles(currentTime);
+
+            // Draw completion text on top
+            canvasHelper.drawCounterText(currentTime, stateManager.counterState, TOTAL_ARCS - stateManager.arcs.length);
+
+            // Continue animation if any arc is bobbling or any circle is expanding
+            if (stateManager.isAnimating()) {
+                requestAnimationFrame(animate);
+            } else {
+                this.animationLoopRunning = false;
+            }
+        }
+
+        if (!this.animationLoopRunning) {
+            this.animationLoopRunning = true;
+            requestAnimationFrame(animate);
+        }
     }
 
     updateRotation(currentTime) {
@@ -91,8 +108,9 @@ class StateManager {
     resetCache() {
         this.counterState.isTextCached = false;
         this.cachedArcs.clear();
-        this.clipRegion = null;
-        this.arcsOnLastUpdate = -1;
+        canvasHelper.resetCache();
+        
+        this.tryStartAnimation();
     }
 
     getCircleState(index) {
@@ -108,6 +126,8 @@ class StateManager {
             const nextArcIndex = this.arcs.length;
             this.arcs.push(new ArcState(nextArcIndex, currentTime, this));
             this.counterState.startIncrementAnimation(currentTime);
+            this.tryStartAnimation();
+
             return true;
         }
         return false;
@@ -121,48 +141,6 @@ class StateManager {
         const completedCircles = Math.floor(this.arcs.length / TOTAL_DIVISIONS);
         // Don't want to push the last circle.
         const completedCirclesToBePushed = Math.min(completedCircles, FINAL_CIRCLE_INDEX);
-
-        // get clip region for non-cached arcs (i.e. the parts that may be moving).
-        var numArcsCached = this.cachedArcs.size;
-        if (this.arcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
-            this.arcsOnLastUpdate = numArcsCached;
-            const paddingAroundRadius = 15; // Padding around the radius for clipping
-            const innerCirclePaddingOuterRadius = BASE_RADIUS + paddingAroundRadius;
-            const innerCirclePaddingInnerRadius = BASE_RADIUS - paddingAroundRadius;
-
-            const donutPath = new Path2D();
-            if (completedCirclesToBePushed > 0) {
-                donutPath.arc(centerX, centerY, BASE_RADIUS + RADIUS_INCREMENT * completedCirclesToBePushed + paddingAroundRadius, 0, TWO_PI); // Outer boundary
-                donutPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, TWO_PI, 0, true); // Inner boundary
-            }
-
-            const innerRingPath = new Path2D();
-            if (numArcsCached !== 0) {
-                // If some arcs are cached, draw a partial inner ring excluding the cached arcs.
-                // The arcs have rounded edges beyond the arc segment length, so offset the starting arc position to account for that.
-                const roundedEndPadding = ARC_GAP / 2;
-                const firstCachedArcStart = startingArcPosition - roundedEndPadding;
-                const lastCachedArcEnd = firstCachedArcStart + numArcsCached * ARC_LENGTH;
-
-                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius * Math.cos(firstCachedArcStart), centerY + innerCirclePaddingOuterRadius * Math.sin(firstCachedArcStart));
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, firstCachedArcStart, lastCachedArcEnd, true); // Outer boundary (partial arc)
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, lastCachedArcEnd, firstCachedArcStart, false); // Inner boundary (partial arc)
-            } else {
-                // If no arcs are cached, draw a full inner ring
-                innerRingPath.moveTo(centerX + innerCirclePaddingOuterRadius, centerY);
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingOuterRadius, 0, TWO_PI); // Outer boundary
-                innerRingPath.arc(centerX, centerY, innerCirclePaddingInnerRadius, TWO_PI, 0, true); // Inner boundary
-            }
-
-            const combinedPath = new Path2D();
-            combinedPath.addPath(donutPath);
-            combinedPath.addPath(innerRingPath);
-            this.clipRegion = combinedPath;
-        }
-
-        ctx.save();
-        ctx.clip(this.clipRegion);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Update rotation of overall rotating circles
         stateManager.updateRotation(currentTime);
@@ -190,7 +168,9 @@ class StateManager {
             this.getCircleState(i).updatePosition(currentTime);
         }
         // Draw and update all arcs
-        var cachedArcsToDraw = [];
+        let cachedArcsToDraw = [];
+
+        canvasHelper.clipToUncachedArcs(this.cachedArcs.size, completedCirclesToBePushed);
 
         this.arcs.forEach(arc => {
             if (circleWasJustCompleted && arc.circle.index !== FINAL_CIRCLE_INDEX) {
@@ -202,7 +182,7 @@ class StateManager {
             arc.updateStates(currentTime);
             if (arc.isAnimating()) {
                 // Always draw animating arcs to main canvas
-                drawArc(arc);
+                canvasHelper.drawArc(arc);
             } else if (!arc.isDot()) {
                 // For static arcs in the latest circle, cache them in inner circle canvas if caching is enabled
                 if (!this.cachedArcs.has(arc.index)) {
@@ -210,16 +190,16 @@ class StateManager {
                 }
             } else {
                 // All other arcs go to main canvas
-                drawArc(arc);
+                canvasHelper.drawArc(arc);
             }
         });
 
         // Restore the canvas state to remove clipping
-        ctx.restore();
+        canvasHelper.restoreFromClipState();
 
         // arcs that are about to be cached need to be drawn after the clipping is removed.
         cachedArcsToDraw && cachedArcsToDraw.forEach(arc => {
-            drawArc(arc);
+            canvasHelper.drawArc(arc);
             this.cachedArcs.add(arc.index); // Mark as cached
         });
     }
@@ -233,131 +213,193 @@ class StateManager {
     }
 }
 
-// Set canvas size to window size accounting for device pixel ratio
-function resizeCanvas() {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();    // Set the canvas size in actual pixels
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+class MathUtils {
+    // Helper function for pulsing animation
+    static getPulseScale(progress, startingSize, maxSize) {
+        var maxScale = maxSize / startingSize;
+        // Maximum scale --> 2.0 == the object will reach ~2x scale (i.e. double size)
+        return startingSize + Math.sin(progress * Math.PI) * Math.exp(-progress * 3.01) * 3 * (maxSize - startingSize);
+    }
 
-    // Scale all drawing operations by the dpr
-    ctx.scale(dpr, dpr);
+    static easeOutBack(originalValue, finalValue, progress) {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
 
-    // Update center coordinates (using CSS pixels)
-    centerX = rect.width / 2;
-    centerY = rect.height / 2;
+        return originalValue + (finalValue - originalValue) * (1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2));
+    }
 
-    stateManager.resetCache();
-    startAnimation();
+    static getShortestDistance(a, b, minValue, maxValue) {
+        const range = maxValue - minValue;
+
+        // Normalize both values to [0, range] first
+        let normA = ((a - minValue) % range + range) % range;
+        let normB = ((b - minValue) % range + range) % range;
+
+        // Direct distance in normalized space
+        let directDist = normB - normA;
+
+        // Wrapping distances
+        let wrapForward = range - normA + normB;  // Going forward through max
+        let wrapBackward = -normA - (range - normB);  // Going backward through min
+
+        // Return the smallest absolute distance, preserving sign
+        if (Math.abs(directDist) <= Math.abs(wrapForward) && Math.abs(directDist) <= Math.abs(wrapBackward)) {
+            return directDist;
+        } else if (Math.abs(wrapForward) <= Math.abs(wrapBackward)) {
+            return wrapForward;
+        } else {
+            return wrapBackward;
+        }
+    }
 }
 
-// Helper function for pulsing animation
-function getPulseScale(progress, startingSize, maxSize) {
-    var maxScale = maxSize / startingSize;
-    // Maximum scale --> 2.0 == the object will reach ~2x scale (i.e. double size)
-    return startingSize + Math.sin(progress * Math.PI) * Math.exp(-progress * 3.01) * 3 * (maxSize - startingSize);
-}
+class CanvasHelper {
+    constructor(stateManager) {
+        this.stateManager = stateManager;
 
-function easeOutBack(originalValue, finalValue, progress) {
-    const c1 = 1.70158;
-    const c3 = c1 + 1;
+        // Get the canvas element
+        this.canvas = document.getElementById('myCanvas');
+        this.ctx = this.canvas.getContext('2d');
 
-    return originalValue + (finalValue - originalValue) * (1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2));
+        // For clipping uncached arc region
+        this.cachedArcsOnLastUpdate = -1;
+        this.clipRegion = null;
+
+        // Handle window resizing
+        window.addEventListener('resize', this.resizeCanvas);
+
+        this.canvas.addEventListener('click', () => {
+            stateManager.addArc(performance.now());
+        });
+    }
+
+    resetCache() {
+        this.cachedArcsOnLastUpdate = -1;
+        this.clipRegion = null;
+    }
+
+    // Set canvas size to window size accounting for device pixel ratio
+    resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.getBoundingClientRect();    // Set the canvas size in actual pixels
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+
+        // Scale all drawing operations by the dpr
+        this.ctx.scale(dpr, dpr);
+
+        // Update center coordinates (using CSS pixels)
+        this.centerX = rect.width / 2;
+        this.centerY = rect.height / 2;
+
+        stateManager.resetCache();
+    }
+
+    clipToUncachedArcs(numArcsCached, numOuterCircles) {
+        // get clip region for non-cached arcs (i.e. the parts that may be moving).
+        if (this.cachedArcsOnLastUpdate !== numArcsCached || !this.clipRegion) {
+            this.cachedArcsOnLastUpdate = numArcsCached;
+
+            const SAFE_PADDING_AROUND_RADIUS = RADIUS_INCREMENT / 2;
+            const INNER_CIRCLE_PADDING_OUTER_RADIUS = BASE_RADIUS + SAFE_PADDING_AROUND_RADIUS;
+            const INNER_CIRCLE_PADDING_INNER_RADIUS = BASE_RADIUS - SAFE_PADDING_AROUND_RADIUS;
+
+            const donutPath = new Path2D();
+            if (numOuterCircles > 0) {
+                donutPath.arc(this.centerX, this.centerY, BASE_RADIUS + RADIUS_INCREMENT * numOuterCircles + SAFE_PADDING_AROUND_RADIUS, 0, TWO_PI); // Outer boundary
+                donutPath.arc(this.centerX, this.centerY, INNER_CIRCLE_PADDING_OUTER_RADIUS, TWO_PI, 0, true); // Inner boundary
+            }
+
+            const innerRingPath = new Path2D();
+            if (numArcsCached !== 0) {
+                // If some arcs are cached, draw a partial inner ring excluding the cached arcs.
+                // The arcs have rounded edges beyond the arc segment length, so offset the starting arc position to account for that.
+                const ROUNDED_END_PADDING = ARC_GAP / 2;
+                const FIRST_CACHED_ARC_START = STARTING_ARC_POSITION - ROUNDED_END_PADDING;
+                const lastCachedArcEnd = FIRST_CACHED_ARC_START + numArcsCached * ARC_LENGTH;
+
+                innerRingPath.moveTo(this.centerX + INNER_CIRCLE_PADDING_OUTER_RADIUS * Math.cos(FIRST_CACHED_ARC_START), this.centerY + INNER_CIRCLE_PADDING_OUTER_RADIUS * Math.sin(FIRST_CACHED_ARC_START));
+                innerRingPath.arc(this.centerX, this.centerY, INNER_CIRCLE_PADDING_OUTER_RADIUS, FIRST_CACHED_ARC_START, lastCachedArcEnd, true); // Outer boundary (partial arc)
+                innerRingPath.arc(this.centerX, this.centerY, INNER_CIRCLE_PADDING_INNER_RADIUS, lastCachedArcEnd, FIRST_CACHED_ARC_START, false); // Inner boundary (partial arc)
+            } else {
+                // If no arcs are cached, draw a full inner ring
+                innerRingPath.moveTo(this.centerX + INNER_CIRCLE_PADDING_OUTER_RADIUS, this.centerY);
+                innerRingPath.arc(this.centerX, this.centerY, INNER_CIRCLE_PADDING_OUTER_RADIUS, 0, TWO_PI); // Outer boundary
+                innerRingPath.arc(this.centerX, this.centerY, INNER_CIRCLE_PADDING_INNER_RADIUS, TWO_PI, 0, true); // Inner boundary
+            }
+
+            const combinedPath = new Path2D();
+            combinedPath.addPath(donutPath);
+            combinedPath.addPath(innerRingPath);
+            this.clipRegion = combinedPath;
+        }
+
+        this.ctx.save();
+        this.ctx.clip(this.clipRegion);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    restoreFromClipState() {
+        this.ctx.restore();
+    }
+
+    drawArc(arcState) {
+        const startAngle = arcState.getStartAngle();
+        const radius = arcState.getRadius();
+    
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = '#ff7954';
+    
+        if (arcState.isDot()) {
+            // Calculate position along the circle's circumference
+            const x = this.centerX + radius * Math.cos(startAngle);
+            const y = this.centerY + radius * Math.sin(startAngle);
+    
+            // Draw a circle at the calculated position
+            this.ctx.fillStyle = '#ff7954';
+            this.ctx.arc(x, y, DOT_RADIUS, 0, TWO_PI);
+            this.ctx.fill();
+        }
+        else {
+            const scale = arcState.getScale();
+            const endAngle = startAngle + arcState.segmentLength;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineWidth = ARC_WIDTH * scale;
+            this.ctx.arc(this.centerX, this.centerY, radius, startAngle, endAngle);
+            this.ctx.stroke();
+        }
+    }
+
+    drawCounterText(currentTime, counterState, remainingClicks) {
+        if (!counterState.isTextCached) {
+            // only clear the text area.
+            this.ctx.clearRect(this.centerX - 45, this.centerY - 45, 90, 90);
+            if (remainingClicks <= 0) {
+                // don't need to display anything when no clicks are remaining
+                counterState.isTextCached = true;
+                return;
+            }
+    
+            const fontSize = counterState.getFontSize(currentTime);
+            this.ctx.save();
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.font = `${fontSize}px Arial`;
+            this.ctx.fillStyle = '#666666';
+            this.ctx.fillText(`${remainingClicks}`, this.centerX, this.centerY);
+            this.ctx.restore();
+    
+            counterState.isTextCached = !counterState.isAnimating();
+        }
+    }
 }
 
 let stateManager;
+let canvasHelper;
 function init() {
     stateManager = new StateManager();
-
-    // Handle window resizing
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    canvasHelper = new CanvasHelper(stateManager);
+    canvasHelper.resizeCanvas();
 }
-
-const startingArcPosition = - Math.PI / 2; // Start with the first arc at the top
-
-function drawArc(arcState) {
-    const startAngle = arcState.getStartAngle();
-    const radius = arcState.getRadius();
-
-    ctx.beginPath();
-    ctx.strokeStyle = '#ff7954';
-
-    if (arcState.isDot()) {
-        // Calculate position along the circle's circumference
-        const x = centerX + radius * Math.cos(startAngle);
-        const y = centerY + radius * Math.sin(startAngle);
-
-        // Draw a circle at the calculated position
-        ctx.fillStyle = '#ff7954';
-        const dotRadius = 5; // Adjust this value to change dot size
-        ctx.arc(x, y, dotRadius, 0, TWO_PI);
-        ctx.fill();
-    }
-    else {
-        const scale = arcState.getScale();
-        const endAngle = startAngle + arcState.segmentLength;
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 10 * scale;
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-        ctx.stroke();
-    }
-}
-
-function drawCompletionText(currentTime, counterState, remainingClicks) {
-    if (!counterState.isTextCached) {
-        // only clear the text area.
-        ctx.clearRect(centerX - 45, centerY - 45, 90, 90);
-        if (remainingClicks <= 0) {
-            // don't need to display anything when no clicks are remaining
-            counterState.isTextCached = true;
-            return;
-        }
-
-        const fontSize = counterState.getFontSize(currentTime);
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = `${fontSize}px Arial`;
-        ctx.fillStyle = '#666666';
-        ctx.fillText(`${remainingClicks}`, centerX, centerY);
-        ctx.restore();
-
-        counterState.isTextCached = !counterState.isAnimating();
-    }
-}
-
-function animate(currentTime) {
-    animationLoopRunning = true;
-
-    // Update circle states
-    stateManager.updateAndDrawCircles(currentTime);
-
-    // Draw completion text on top
-    drawCompletionText(currentTime, stateManager.counterState, TOTAL_ARCS - stateManager.arcs.length);
-
-    // Continue animation if any arc is bobbling or any circle is expanding
-    if (stateManager.isAnimating()) {
-        requestAnimationFrame(animate);
-    }
-    else {
-        animationLoopRunning = false;
-    }
-}
-
-let animationLoopRunning = false;
-function startAnimation() {
-    if (!animationLoopRunning) {
-        animationLoopRunning = true;
-        requestAnimationFrame(animate);
-    }
-}
-
-// Handle clicks
-canvas.addEventListener('click', () => {
-    if (stateManager.addArc(performance.now())) {
-        startAnimation();
-    }
-});
 
 init();

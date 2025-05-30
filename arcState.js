@@ -38,7 +38,7 @@ class ArcState {
         if (this.currentState === ArcState.ArcAnimationState.ENTRY_ANIMATING) {
             const progress = Math.min((currentTime - this.creationTime) / ArcState.ARC_ENTRY_ANIM_DURATION, 1);
             if (progress < 1) {
-                this.scale = getPulseScale(progress, 1, 1.3);
+                this.scale = MathUtils.getPulseScale(progress, 1, 1.3);
                 return;
             }
 
@@ -93,7 +93,7 @@ class ArcState {
     }
 
     getStartAngle() {
-        const baseStartAngle = this.positionInCircle * ARC_LENGTH + startingArcPosition;
+        const baseStartAngle = this.positionInCircle * ARC_LENGTH + STARTING_ARC_POSITION;
         const rotation = this.circle.isRotating ? (this.stateManager.baseRotation - this.circle.rotationOffset) : 0;
         return baseStartAngle + rotation + this.startAngleCenteringOffset;
     }

@@ -39,7 +39,7 @@ class CircleState {
         }
 
         // Calculate the shortest path to the previous circle's offset
-        var shortestDistance = this.getShortestDistance(offsetToApproach, this.startingRotationOffset, -ARC_LENGTH_MIDPOINT, ARC_LENGTH_MIDPOINT);
+        var shortestDistance = MathUtils.getShortestDistance(offsetToApproach, this.startingRotationOffset, -ARC_LENGTH_MIDPOINT, ARC_LENGTH_MIDPOINT);
         this.targetOffset = this.startingRotationOffset;
 
         // If distance is too large, limit the rotation to MAX_ROTATIONAL_OFFSET from the previous circles offset.
@@ -64,35 +64,11 @@ class CircleState {
                 this.rotationOffset = this.targetOffset;
             }
             else {
-                this.radius = easeOutBack(this.oldRadius, this.targetRadius, progress);
+                this.radius = MathUtils.easeOutBack(this.oldRadius, this.targetRadius, progress);
                 if (this.rotationOffset !== this.targetOffset) {
-                    this.rotationOffset = easeOutBack(this.startingRotationOffset, this.targetOffset, progress);
+                    this.rotationOffset = MathUtils.easeOutBack(this.startingRotationOffset, this.targetOffset, progress);
                 }
             }
-        }
-    }
-
-    getShortestDistance(a, b, minValue, maxValue) {
-        const range = maxValue - minValue;
-
-        // Normalize both values to [0, range] first
-        let normA = ((a - minValue) % range + range) % range;
-        let normB = ((b - minValue) % range + range) % range;
-
-        // Direct distance in normalized space
-        let directDist = normB - normA;
-
-        // Wrapping distances
-        let wrapForward = range - normA + normB;  // Going forward through max
-        let wrapBackward = -normA - (range - normB);  // Going backward through min
-
-        // Return the smallest absolute distance, preserving sign
-        if (Math.abs(directDist) <= Math.abs(wrapForward) && Math.abs(directDist) <= Math.abs(wrapBackward)) {
-            return directDist;
-        } else if (Math.abs(wrapForward) <= Math.abs(wrapBackward)) {
-            return wrapForward;
-        } else {
-            return wrapBackward;
         }
     }
 }
