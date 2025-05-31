@@ -50,7 +50,8 @@ class CounterState {
 }
 
 class StateManager {
-    constructor() {
+    constructor(canvasHelper) {
+        this.canvasHelper = canvasHelper;
         this.circles = [];
         this.arcs = [];
         this.completedCirclesOnLastUpdate = 0;
@@ -69,7 +70,7 @@ class StateManager {
             this.updateAndDrawCircles(currentTime);
 
             // Draw completion text on top
-            canvasHelper.drawCounterText(currentTime, this.counterState, TOTAL_ARCS - this.arcs.length);
+            this.canvasHelper.drawCounterText(currentTime, this.counterState, TOTAL_ARCS - this.arcs.length);
 
             // Continue animation if any arc is bobbling or any circle is expanding
             if (this.isAnimating()) {
@@ -108,9 +109,6 @@ class StateManager {
     resetCache() {
         this.counterState.isTextCached = false;
         this.cachedArcs.clear();
-        canvasHelper.resetCache();
-        
-        this.tryStartAnimation();
     }
 
     getCircleState(index) {
@@ -170,7 +168,7 @@ class StateManager {
         // Draw and update all arcs
         let cachedArcsToDraw = [];
 
-        canvasHelper.clipToUncachedArcs(this.cachedArcs.size, completedCirclesToBePushed);
+        this.canvasHelper.clipToUncachedArcs(this.cachedArcs.size, completedCirclesToBePushed);
 
         this.arcs.forEach(arc => {
             if (circleWasJustCompleted && arc.circle.index !== FINAL_CIRCLE_INDEX) {
@@ -182,7 +180,7 @@ class StateManager {
             arc.updateStates(currentTime);
             if (arc.isAnimating()) {
                 // Always draw animating arcs to main canvas
-                canvasHelper.drawArc(arc);
+                this.canvasHelper.drawArc(arc);
             } else if (!arc.isDot()) {
                 // For static arcs in the latest circle, cache them in inner circle canvas if caching is enabled
                 if (!this.cachedArcs.has(arc.index)) {
@@ -190,16 +188,16 @@ class StateManager {
                 }
             } else {
                 // All other arcs go to main canvas
-                canvasHelper.drawArc(arc);
+                this.canvasHelper.drawArc(arc);
             }
         });
 
         // Restore the canvas state to remove clipping
-        canvasHelper.restoreFromClipState();
+        this.canvasHelper.restoreFromClipState();
 
         // arcs that are about to be cached need to be drawn after the clipping is removed.
         cachedArcsToDraw && cachedArcsToDraw.forEach(arc => {
-            canvasHelper.drawArc(arc);
+            this.canvasHelper.drawArc(arc);
             this.cachedArcs.add(arc.index); // Mark as cached
         });
     }
@@ -264,13 +262,6 @@ class CanvasHelper {
         // For clipping uncached arc region
         this.cachedArcsOnLastUpdate = -1;
         this.clipRegion = null;
-
-        // Handle window resizing
-        window.addEventListener('resize', this.resizeCanvas.bind(this));
-
-        this.canvas.addEventListener('click', () => {
-            this.stateManager.addArc(performance.now());
-        });
     }
 
     resetCache() {
@@ -292,7 +283,7 @@ class CanvasHelper {
         this.centerX = rect.width / 2;
         this.centerY = rect.height / 2;
 
-        this.stateManager.resetCache();
+        this.resetCache();
     }
 
     clipToUncachedArcs(numArcsCached, numOuterCircles) {
@@ -394,12 +385,24 @@ class CanvasHelper {
     }
 }
 
-let stateManager;
-let canvasHelper;
 function init() {
-    stateManager = new StateManager();
-    canvasHelper = new CanvasHelper(stateManager);
-    canvasHelper.resizeCanvas();
+    const canvasHelper = new CanvasHelper();
+    const stateManager = new StateManager(canvasHelper);
+
+    const onWindowResize = () => {
+        canvasHelper.resizeCanvas();
+        stateManager.resetCache();
+        stateManager.tryStartAnimation();
+    }
+    
+    // Handle window resizing
+    window.addEventListener('resize', onWindowResize);
+
+    canvasHelper.canvas.addEventListener('click', () => {
+        stateManager.addArc(performance.now());
+    });
+
+    onWindowResize();
 }
 
 init();
