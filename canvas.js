@@ -85,6 +85,11 @@ class AudioManager {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
             const playAudioBuffer = (buffer) => {
+                if (audioContext.state === "suspended") {
+                    // needs to be resumed on interaction.
+                    audioContext.resume();
+                }
+
                 const source = audioContext.createBufferSource();
                 source.buffer = buffer;
                 source.connect(audioContext.destination);
