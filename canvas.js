@@ -17,8 +17,8 @@ const DOT_RADIUS = ARC_WIDTH / 2;
 
 class CounterState {
     static TEXT_TAP_ANIM_DURATION = 400;
-    static BASE_FONT_SIZE = 50;
-    static MAX_FONT_SIZE = 60;
+    static BASE_FONT_SIZE = 60;
+    static MAX_FONT_SIZE = 70;
 
     constructor() {
         this.textBobbleStartTime = null;
@@ -374,10 +374,12 @@ class CanvasHelper {
             const fontSize = counterState.getFontSize(currentTime);
             this.ctx.save();
             this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.font = `${fontSize}px Arial`;
+            this.ctx.font = `500 ${fontSize}px "Helvetica Neue","Segoe UI",Arial,sans-serif`;
             this.ctx.fillStyle = '#666666';
-            this.ctx.fillText(`${remainingClicks}`, this.centerX, this.centerY);
+            const text = `${remainingClicks}`;
+            const textMetrics = this.ctx.measureText(text);
+            const textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
+            this.ctx.fillText(text, this.centerX, this.centerY + textHeight / 2);
             this.ctx.restore();
     
             counterState.isTextCached = !counterState.isAnimating();
