@@ -402,6 +402,9 @@ function init() {
         stateManager.addArc(performance.now());
     });
 
+    // Initialize debug tools if needed
+    initializeDebugTools && initializeDebugTools(stateManager, canvasHelper);
+
     onWindowResize();
 }
 

@@ -34,6 +34,21 @@
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
+    <div id="debugTools" style="display: none; position: fixed; bottom: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+        <div style="margin-bottom: 8px;">
+            <label>Remaining arcs: <input type="number" id="debugArcsInput" min="0" max="95" value="5" style="width: 60px;"></label>
+            <button id="debugSetArcs">Set</button>
+        </div>
+        <div style="display: flex; gap: 4px;">
+            <button class="debugJump" data-value="77">77</button>
+            <button class="debugJump" data-value="58">58</button>
+            <button class="debugJump" data-value="39">39</button>
+            <button class="debugJump" data-value="20">20</button>
+            <button class="debugJump" data-value="1">1</button>
+            <button class="debugJump" data-value="0">0</button>
+        </div>
+    </div>
+    <script src="debug.js"></script>
     <script src="circleState.js"></script>
     <script src="arcState.js"></script>
     <script src="canvas.js"></script>
