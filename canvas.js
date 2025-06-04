@@ -15,6 +15,26 @@ const MAX_ROTATIONAL_OFFSET = ARC_LENGTH_MIDPOINT / 2;
 const ARC_WIDTH = 10;
 const DOT_RADIUS = ARC_WIDTH / 2;
 
+class Colors {
+    static PALETTE = {
+        CORAL_THEME: "#ff7954",
+        WHITE: "#FFF",
+        DARK_BLUE: "#093148"
+    }
+
+    static LIGHT_MODE = {
+        ARCS: Colors.PALETTE.CORAL_THEME,
+        TEXT: Colors.PALETTE.DARK_BLUE,
+        BACKGROUND: Colors.PALETTE.WHITE
+    }
+
+    static DARK_MODE = {
+        ARCS: Colors.PALETTE.CORAL_THEME,
+        TEXT: Colors.PALETTE.WHITE,
+        BACKGROUND: Colors.PALETTE.DARK_BLUE
+    }
+}
+
 class CounterState {
     static TEXT_TAP_ANIM_DURATION = 400;
     static BASE_FONT_SIZE = 60;
@@ -258,6 +278,8 @@ class CanvasHelper {
         // Get the canvas element
         this.canvas = document.getElementById('myCanvas');
         this.ctx = this.canvas.getContext('2d');
+        this.colors = null;
+        this.setTheme();
 
         // For clipping uncached arc region
         this.cachedArcsOnLastUpdate = -1;
@@ -267,6 +289,19 @@ class CanvasHelper {
     resetCache() {
         this.cachedArcsOnLastUpdate = -1;
         this.clipRegion = null;
+    }
+
+    setTheme(toggleTheme = false) {
+        let isDark = localStorage.getItem('theme') === 'dark';
+        if (toggleTheme) {
+            isDark = !isDark;
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        this.colors = isDark ? Colors.DARK_MODE : Colors.LIGHT_MODE;
+        this.canvas.style.background = this.colors.BACKGROUND;
+        document.body.classList.toggle('dark-mode', isDark);
+        this.resetCache();
     }
 
     // Set canvas size to window size accounting for device pixel ratio
@@ -339,7 +374,7 @@ class CanvasHelper {
         const radius = arcState.getRadius();
     
         this.ctx.beginPath();
-        this.ctx.strokeStyle = '#ff7954';
+        this.ctx.strokeStyle = this.colors.ARCS;
     
         if (arcState.isDot()) {
             // Calculate position along the circle's circumference
@@ -347,7 +382,7 @@ class CanvasHelper {
             const y = this.centerY + radius * Math.sin(startAngle);
     
             // Draw a circle at the calculated position
-            this.ctx.fillStyle = '#ff7954';
+            this.ctx.fillStyle = this.colors.ARCS;
             this.ctx.arc(x, y, DOT_RADIUS, 0, TWO_PI);
             this.ctx.fill();
         }
@@ -375,7 +410,7 @@ class CanvasHelper {
             this.ctx.save();
             this.ctx.textAlign = 'center';
             this.ctx.font = `500 ${fontSize}px "Helvetica Neue","Segoe UI",Arial,sans-serif`;
-            this.ctx.fillStyle = '#666666';
+            this.ctx.fillStyle = this.colors.TEXT;
             const text = `${remainingClicks}`;
             const textMetrics = this.ctx.measureText(text);
             const textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
@@ -402,6 +437,14 @@ function init() {
 
     canvasHelper.canvas.addEventListener('click', () => {
         stateManager.addArc(performance.now());
+    });
+
+    // Handle theme switching
+    const themeButton = document.getElementById('themeButton');
+    themeButton.addEventListener('click', () => {
+        canvasHelper.setTheme(true);
+        stateManager.resetCache();
+        stateManager.tryStartAnimation();
     });
 
     // Initialize debug tools if needed

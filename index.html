@@ -30,11 +30,40 @@
             user-select: none;
             display: block;
         }
+
+        .iconButton {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 8px;
+            color: var(--icon-color, #093148);
+            transition: background-color 0.2s;
+        }
+
+        .iconButton:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --icon-color: #FFF;
+        }
+
+        .dark-mode .iconButton:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
-    <div id="debugTools" style="display: none; position: fixed; bottom: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+    <div id="controls" style="position: fixed; top: 16px; right: 16px; display: flex; gap: 12px;">
+        <button id="themeButton" class="iconButton">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+    </div>
+    <div id="debugTools"style="display: none; position: fixed; bottom: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
         <div style="margin-bottom: 8px;">
             <label>Remaining arcs: <input type="number" id="debugArcsInput" min="0" max="95" value="5" style="width: 60px;"></label>
             <button id="debugSetArcs">Set</button>
