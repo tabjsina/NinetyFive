@@ -39,6 +39,7 @@
             border-radius: 8px;
             color: var(--icon-color, #093148);
             transition: background-color 0.2s;
+            line-height: 0;
         }
 
         .iconButton:hover {
@@ -51,6 +52,60 @@
 
         .dark-mode .iconButton:hover {
             background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .soundMenu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            display: none;
+            flex-direction: column;
+            margin-top: 18px;
+            padding-top: 12px;
+            min-width: 200px;
+            font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+        }
+
+        .soundMenu::before {
+            content: "";
+            position: absolute;
+            top: -6px;
+            right: 14px;
+            width: 12px;
+            height: 12px;
+            transform: rotate(45deg);
+            border-left: 1px solid var(--icon-color, #093148);
+            border-top: 1px solid var(--icon-color, #093148);
+        }
+
+        .soundMenu.visible {
+            display: flex;
+        }
+
+        .soundOption {
+            display: flex;
+            align-items: center;
+            color: var(--icon-color, #093148);
+        }
+
+        .soundOption span {
+            text-align: right;
+            flex: 1;
+        }
+
+        .soundOption .separator {
+            width: 1px;
+            height: 24px;
+            background-color: var(--icon-color, #093148);
+            margin: 0 8px 0 16px;
+        }
+
+        .soundOption .iconButton.disabled {
+            --icon-color: rgba(9, 49, 72, 0.3);
+        }
+
+        .dark-mode .soundOption .iconButton.disabled {
+            --icon-color: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -67,6 +122,44 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
+        <button id="settingsButton" class="iconButton">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </button>
+        <div class="soundMenu" id="soundMenu">
+            <div class="soundOption">
+                <span>First tap</span>
+                <div class="separator"></div>
+                <button class="iconButton" id="soundFirstTap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="soundOption">
+                <span>19 intervals</span>
+                <div class="separator"></div>
+                <button class="iconButton" id="sound19Interval">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="soundOption">
+                <span>Final tap</span>
+                <div class="separator"></div>
+                <button class="iconButton" id="soundFinalTap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
     <div id="debugTools"style="display: none; position: fixed; bottom: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
         <div style="margin-bottom: 8px;">
@@ -86,5 +179,6 @@
     <script src="circleState.js"></script>
     <script src="arcState.js"></script>
     <script src="canvas.js"></script>
+    <script src="soundMenu.js"></script>
 </body>
 </html>

@@ -69,6 +69,28 @@ class CounterState {
     }
 }
 
+class AudioManager {
+    static ClickSound = new Audio('short.mp3');
+
+    static playTap() {
+        this.ClickSound.currentTime = 0;
+        this.ClickSound.play();
+    }
+
+    static playDoubleTap() {
+        this.ClickSound.currentTime = 0;
+        const playSecondTap = () => {
+            this.ClickSound.removeEventListener('ended', playSecondTap);
+            setTimeout(() => {
+                this.ClickSound.currentTime = 0;
+                this.ClickSound.play();
+            }, 100);
+        };
+        this.ClickSound.addEventListener('ended', playSecondTap);
+        this.ClickSound.play();
+    }
+}
+
 class StateManager {
     constructor(canvasHelper) {
         this.canvasHelper = canvasHelper;
@@ -154,6 +176,17 @@ class StateManager {
             this.circles.push(new CircleState(this.circles.length));
         }
         return this.circles[index];
+    }    playSoundIfNeeded() {
+        if (this.arcs.length === TOTAL_ARCS && SoundSettings.loadSettings().finalTap) {
+            // double tap sound on final tap
+            AudioManager.playDoubleTap();
+        } else if (this.arcs.length === 1 && SoundSettings.loadSettings().firstTap) {
+            // play sound on first tap
+            AudioManager.playTap();
+        } else if (this.arcs.length % TOTAL_DIVISIONS === 0 && SoundSettings.loadSettings().interval19) {
+            // play sound on circle intervals if enabled
+            AudioManager.playTap();
+        }
     }
 
     addArc(currentTime) {
@@ -161,6 +194,7 @@ class StateManager {
             const nextArcIndex = this.arcs.length;
             this.arcs.push(new ArcState(nextArcIndex, currentTime, this));
             this.counterState.startIncrementAnimation(currentTime);
+            this.playSoundIfNeeded();
             this.tryStartAnimation();
 
             return true;
