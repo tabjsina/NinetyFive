@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const soundMenu = document.getElementById('soundMenu');
 
     const firstTapButton = document.getElementById('soundFirstTap');
-    const interval19Button = document.getElementById('sound19Interval');
+    const every19thTapButton = document.getElementById('sound19thTap');
     const finalTapButton = document.getElementById('soundFinalTap');
 
     // Load initial settings
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize button states
     function updateButtonStates() {
         firstTapButton.classList.toggle('disabled', !settings.firstTap);
-        interval19Button.classList.toggle('disabled', !settings.interval19);
+        every19thTapButton.classList.toggle('disabled', !settings.interval19);
         finalTapButton.classList.toggle('disabled', !settings.finalTap);
     }
     updateButtonStates();
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    interval19Button.addEventListener('click', () => {
+    every19thTapButton.addEventListener('click', () => {
         settings.interval19 = !settings.interval19;
         SoundSettings.saveSettings(settings);
         updateButtonStates();
