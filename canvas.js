@@ -585,6 +585,10 @@ function init() {
     initializeDebugTools && initializeDebugTools(stateManager, canvasHelper);
 
     onWindowResize();
+
+    document.addEventListener('dblclick', function(event) {
+        event.preventDefault();
+    }, { passive: false });
 }
 
 init();
