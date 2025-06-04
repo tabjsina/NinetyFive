@@ -84,6 +84,28 @@ class StateManager {
         this.animationLoopRunning = false;
     }
 
+    reset() {
+        // Reset all state
+        this.canvasHelper.reset();
+        this.circles = [];
+        this.arcs = [];
+        this.completedCirclesOnLastUpdate = 0;
+        this.activeCircleIndex = 0;
+        this.counterState = new CounterState();
+        this.baseRotation = 0;
+        this.lastRotationFrameTime = null;
+        this.rotationSpeed = 0;
+        this.cachedArcs.clear();
+
+        // Run animation if it isn't already to draw the reset state
+        this.tryStartAnimation();
+    }
+
+    resetCache() {
+        this.counterState.isTextCached = false;
+        this.cachedArcs.clear();
+    }
+
     tryStartAnimation() {
         let animate = (currentTime) => {
             // Update circle states
@@ -124,11 +146,6 @@ class StateManager {
             this.lastRotationFrameTime = currentTime;
             this.rotationSpeed = 0.075;
         }
-    }
-
-    resetCache() {
-        this.counterState.isTextCached = false;
-        this.cachedArcs.clear();
     }
 
     getCircleState(index) {
@@ -286,6 +303,11 @@ class CanvasHelper {
         this.clipRegion = null;
     }
 
+    reset() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.resetCache();
+    }
+
     resetCache() {
         this.cachedArcsOnLastUpdate = -1;
         this.clipRegion = null;
@@ -434,9 +456,18 @@ function init() {
     
     // Handle window resizing
     window.addEventListener('resize', onWindowResize);
+    const resetButton = document.getElementById('resetButton');
 
     canvasHelper.canvas.addEventListener('click', () => {
-        stateManager.addArc(performance.now());
+        if (stateManager.addArc(performance.now())) {
+            resetButton.style.display = 'block';
+        }
+    });
+
+    // Handle reset button
+    resetButton.addEventListener('click', () => {
+        stateManager.reset();
+        resetButton.style.display = 'none';
     });
 
     // Handle theme switching
