@@ -54,17 +54,26 @@ document.addEventListener('DOMContentLoaded', () => {
         settings.firstTap = !settings.firstTap;
         SoundSettings.saveSettings(settings);
         updateButtonStates();
+        if (settings.firstTap) {
+            AudioManager.playFirstTap();
+        }
     });
 
     interval19Button.addEventListener('click', () => {
         settings.interval19 = !settings.interval19;
         SoundSettings.saveSettings(settings);
         updateButtonStates();
+        if (settings.interval19) {
+            AudioManager.play19IntervalTap();
+        }
     });
 
     finalTapButton.addEventListener('click', () => {
         settings.finalTap = !settings.finalTap;
         SoundSettings.saveSettings(settings);
         updateButtonStates();
+        if (settings.finalTap) {
+            AudioManager.playFinalTap();
+        }
     });
 });

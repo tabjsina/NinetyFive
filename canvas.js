@@ -70,24 +70,90 @@ class CounterState {
 }
 
 class AudioManager {
-    static ClickSound = new Audio('short.mp3');
+    static SingleTapAudioRelativePath = "tap.mp3";
+    static DOUBLE_TAP_SILENCE_IN_SEC = 0.2; // 200ms
 
-    static playTap() {
-        this.ClickSound.currentTime = 0;
-        this.ClickSound.play();
+    static SoundList = {
+        SingleTap: 0,
+        DoubleTap: 1
     }
 
-    static playDoubleTap() {
-        this.ClickSound.currentTime = 0;
-        const playSecondTap = () => {
-            this.ClickSound.removeEventListener('ended', playSecondTap);
-            setTimeout(() => {
-                this.ClickSound.currentTime = 0;
-                this.ClickSound.play();
-            }, 100);
-        };
-        this.ClickSound.addEventListener('ended', playSecondTap);
-        this.ClickSound.play();
+    static Sounds = {};
+
+    static async init() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            const playAudioBuffer = (buffer) => {
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioContext.destination);
+                source.start(0);
+            }
+
+            const singleTapBuffer = await fetch(AudioManager.SingleTapAudioRelativePath)
+                .then(response => response.arrayBuffer())
+                .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer));
+
+            // Create a new buffer for double tap (original + silence + original)
+            const silenceSamples = Math.floor(AudioManager.DOUBLE_TAP_SILENCE_IN_SEC * audioContext.sampleRate);
+            const totalLength = singleTapBuffer.length * 2 + silenceSamples;
+            const doubleTapBuffer = audioContext.createBuffer(
+                singleTapBuffer.numberOfChannels,
+                totalLength,
+                audioContext.sampleRate
+            );
+
+            for (let channel = 0; channel < singleTapBuffer.numberOfChannels; channel++) {
+                const sourceData = singleTapBuffer.getChannelData(channel);
+                const targetData = doubleTapBuffer.getChannelData(channel);
+                targetData.set(sourceData, 0);
+                // Copy first instance and then second after the first playback + silence gap
+                targetData.set(sourceData, singleTapBuffer.length + silenceSamples);
+            }
+
+            AudioManager.Sounds[AudioManager.SoundList.SingleTap] = () => playAudioBuffer(singleTapBuffer);
+            AudioManager.Sounds[AudioManager.SoundList.DoubleTap] = () => playAudioBuffer(doubleTapBuffer);
+        } catch (e) {
+            // Fallback to Audio class
+            console.log('WebAudio not supported, falling back to Audio API');
+
+            let count = 1;
+            const playAudioElement = (audio) => {
+                audio.currentTime = 0;
+                audio.play();
+            }
+
+            const singleTapAudio = new Audio(AudioManager.SingleTapAudioRelativePath);
+
+            AudioManager.Sounds[AudioManager.SoundList.SingleTap] = () => playAudioElement(singleTapAudio);
+            AudioManager.Sounds[AudioManager.SoundList.DoubleTap] = () => {
+                const playSecondTap = () => {
+                    singleTapAudio.removeEventListener('ended', playSecondTap);
+                    setTimeout(() => {
+                        playAudioElement(singleTapAudio);
+                    }, AudioManager.DOUBLE_TAP_SILENCE_IN_SEC * 1000);
+                };
+                singleTapAudio.addEventListener('ended', playSecondTap);
+                playAudioElement(singleTapAudio);
+            }
+        }
+    }
+
+    static playSound(sound) {
+        AudioManager.Sounds[sound]();
+    }
+
+    static playFirstTap() {
+        AudioManager.playSound(AudioManager.SoundList.SingleTap);
+    }
+
+    static play19IntervalTap() {
+        AudioManager.playSound(AudioManager.SoundList.SingleTap);
+    }
+
+    static playFinalTap() {
+        AudioManager.playSound(AudioManager.SoundList.DoubleTap);
     }
 }
 
@@ -178,14 +244,11 @@ class StateManager {
         return this.circles[index];
     }    playSoundIfNeeded() {
         if (this.arcs.length === TOTAL_ARCS && SoundSettings.loadSettings().finalTap) {
-            // double tap sound on final tap
-            AudioManager.playDoubleTap();
+            AudioManager.playFinalTap();
         } else if (this.arcs.length === 1 && SoundSettings.loadSettings().firstTap) {
-            // play sound on first tap
-            AudioManager.playTap();
+            AudioManager.playFirstTap();
         } else if (this.arcs.length % TOTAL_DIVISIONS === 0 && SoundSettings.loadSettings().interval19) {
-            // play sound on circle intervals if enabled
-            AudioManager.playTap();
+            AudioManager.play19IntervalTap();
         }
     }
 
@@ -479,6 +542,7 @@ class CanvasHelper {
 }
 
 function init() {
+    AudioManager.init();
     const canvasHelper = new CanvasHelper();
     const stateManager = new StateManager(canvasHelper);
 
